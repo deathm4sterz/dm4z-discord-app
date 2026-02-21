@@ -13,6 +13,6 @@ RUN	cargo build --release
 
 FROM	scratch	AS	runtime
 
-COPY --from=app-build	/opt/target/release/baburao	/usr/bin/
+COPY --from=app-build	/opt/target/release/dm4z-discord-app	/usr/bin/
 
-CMD	[ "/usr/bin/baburao" ]
+CMD	[ "/usr/bin/dm4z-discord-app" ]
