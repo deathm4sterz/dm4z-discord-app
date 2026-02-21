@@ -1,5 +1,7 @@
 # dm4z-discord-app
 
+[![codecov](https://codecov.io/gh/deathm4sterz/dm4z-discord-app/branch/main/graph/badge.svg)](https://codecov.io/gh/deathm4sterz/dm4z-discord-app)
+
 AoE2 community Discord bot implemented in Python with `py-cord`.
 
 ## Features
@@ -62,6 +64,9 @@ PYTHONPATH=src python -m pytest -q
   - failing coverage exits non-zero (`--cov-fail-under=100`)
 - terminal coverage details are shown with missing lines (`--cov-report=term-missing`)
 - XML coverage report is written to `coverage.xml` for CI/report tooling
+- CI uploads coverage to Codecov:
+  - project dashboard: <https://codecov.io/gh/deathm4sterz/dm4z-discord-app>
+  - pull requests include Codecov status checks against `.codecov.yml`
 - expected successful test summary looks like:
   - `29 passed`
   - `Required test coverage of 100% reached. Total coverage: 100.00%`
