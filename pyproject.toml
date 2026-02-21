@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "dm4z-discord-app"
+version = "0.3.0"
+description = "AoE2 Discord bot implemented in Python with py-cord."
+authors = ["dm4z contributors"]
+readme = "README.md"
+packages = [{ include = "dm4z_bot", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+py-cord = "^2.6.1"
+httpx = "^0.28.1"
+python-dotenv = "^1.1.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.4.1"
+pytest-cov = "^6.2.1"
+pytest-asyncio = "^1.1.0"
+respx = "^0.22.0"
+coverage = "^7.10.6"
+ruff = "^0.12.11"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--cov=src --cov-report=term-missing --cov-report=xml --cov-fail-under=100"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 100
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"

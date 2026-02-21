@@ -1,18 +1,31 @@
-FROM	rust:1.93.1-alpine3.20	AS	app-build
+FROM python:3.12-alpine AS builder
 
-WORKDIR	/opt
+ENV POETRY_VERSION=1.8.4 \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false
 
-RUN	apk update && \
-	apk add make gcc g++ libressl-dev
+WORKDIR /app
 
-COPY	Cargo.toml Cargo.lock	./
+RUN apk add --no-cache build-base libffi-dev openssl-dev \
+    && pip install --no-cache-dir "poetry==${POETRY_VERSION}"
 
-COPY	.	.
+COPY pyproject.toml ./
+RUN poetry export --without-hashes --format requirements.txt --output requirements.txt
 
-RUN	cargo build --release
+FROM python:3.12-alpine AS runtime
 
-FROM	scratch	AS	runtime
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-COPY --from=app-build	/opt/target/release/dm4z-discord-app	/usr/bin/
+WORKDIR /app
 
-CMD	[ "/usr/bin/dm4z-discord-app" ]
+RUN adduser -D botuser
+
+COPY --from=builder /app/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src /app/src
+
+USER botuser
+
+CMD ["python", "-m", "src.main"]

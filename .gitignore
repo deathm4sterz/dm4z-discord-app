@@ -1,6 +1,18 @@
+pyvenv
 /target
 .env
 .envrc
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.pyc
+poetry.lock
 
 # Created by https://www.toptal.com/developers/gitignore/api/emacs,git,intellij+all,visualstudiocode,vim,rust
 # Edit at https://www.toptal.com/developers/gitignore?templates=emacs,git,intellij+all,visualstudiocode,vim,rust
