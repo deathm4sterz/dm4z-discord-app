@@ -1,4 +1,4 @@
-FROM	rust:1.83.0-alpine3.19	AS	app-build
+FROM	rust:1.93.1-alpine3.20	AS	app-build
 
 WORKDIR	/opt
 
