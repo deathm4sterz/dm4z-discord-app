@@ -14,14 +14,15 @@ def test_configure_logging_sets_expected_format() -> None:
     assert root_handlers
 
 
-def test_main_loads_settings_and_runs_bot(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_async_main_loads_settings_and_starts_bot(monkeypatch: pytest.MonkeyPatch) -> None:
     settings = SimpleNamespace(discord_token="token", log_level="INFO")
     monkeypatch.setattr(main_module, "load_settings", lambda: settings)
     called: list[tuple[str, str]] = []
 
     class FakeBot:
-        def run(self, token: str) -> None:
-            called.append(("run", token))
+        async def start(self, token: str) -> None:
+            called.append(("start", token))
 
     monkeypatch.setattr(main_module, "Dm4zBot", FakeBot)
     monkeypatch.setattr(
@@ -29,6 +30,24 @@ def test_main_loads_settings_and_runs_bot(monkeypatch: pytest.MonkeyPatch) -> No
         "configure_logging",
         lambda level: called.append(("log", level)),
     )
+    await main_module.async_main()
+    assert called == [("log", "INFO"), ("start", "token")]
+
+
+def test_main_handles_keyboard_interrupt(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def mock_async_main() -> None:
+        raise KeyboardInterrupt("Test interrupt")
+
+    monkeypatch.setattr(main_module, "async_main", mock_async_main)
+    
+    # Capture logging calls
+    logged_messages: list[str] = []
+    def mock_log_info(msg: str) -> None:
+        logged_messages.append(msg)
+    
+    monkeypatch.setattr(logging, "info", mock_log_info)
+    
+    # Should not raise, should handle gracefully
     main_module.main()
-    assert called == [("log", "INFO"), ("run", "token")]
+    assert logged_messages == ["Bot stopped by user"]
 
