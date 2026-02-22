@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 class Settings:
     discord_token: str
     log_level: str = "INFO"
+    debug_guild_id: int | None = None
 
 
 def load_settings() -> Settings:
@@ -17,8 +18,13 @@ def load_settings() -> Settings:
     token = getenv("DISCORD_TOKEN")
     if not token:
         raise RuntimeError("missing DISCORD_TOKEN")
+    
+    guild_id = getenv("DEBUG_GUILD_ID")
+    debug_guild_id = int(guild_id) if guild_id else None
+    
     return Settings(
         discord_token=token,
         log_level=getenv("LOG_LEVEL", "INFO").upper(),
+        debug_guild_id=debug_guild_id,
     )
 

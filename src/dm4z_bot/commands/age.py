@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import discord
+from discord import option
 
 
 class AgeCommands(discord.Cog):
@@ -8,10 +9,11 @@ class AgeCommands(discord.Cog):
         self.bot = bot
 
     @discord.slash_command(description="Displays your or another user's account creation date")
+    @option("user", discord.User, description="Selected user", required=False)
     async def age(
         self,
         ctx: discord.ApplicationContext,
-        user: discord.Option(discord.User, required=False, description="Selected user") = None,
+        user: discord.User | None = None,
     ) -> None:
         selected_user = user or ctx.author
         await ctx.respond(

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 import discord
+from discord import option
 
 from dm4z_bot.utils.match_reply import build_match_response_text, build_match_view
 from dm4z_bot.utils.regex_patterns import extract_match_id
@@ -15,12 +16,11 @@ class MatchInfoCommands(discord.Cog):
         self.bot = bot
 
     @discord.slash_command(description="Show match information from link or match id")
+    @option("match_id", str, description="aoe2 insight link, or lobby link or plain match id")
     async def match_info(
         self,
         ctx: discord.ApplicationContext,
-        match_id: discord.Option(
-            str, description="aoe2 insight link, or lobby link or plain match id"
-        ),
+        match_id: str,
     ) -> None:
         extracted_id = extract_match_id(match_id)
         if not extracted_id:
