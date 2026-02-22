@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import cast
 
 import discord
+from discord import option
 
-from dm4z_bot.services.aoe2_api import Aoe2Api
+from dm4z_bot.services.aoe2_api import Aoe2Api, PlayerNotFoundError
 
 
 class TeamRankCommands(discord.Cog):
@@ -13,13 +14,20 @@ class TeamRankCommands(discord.Cog):
         self.api = api
 
     @discord.slash_command(description="Show player team-rank statistic from aoe companion")
+    @option("player_name", str, description="In-game player name to search")
     async def team_rank(
         self,
         ctx: discord.ApplicationContext,
-        player_name: discord.Option(str, description="In-game player name to search"),
+        player_name: str,
     ) -> None:
-        response = await self.api.team_rank(player_name=player_name)
-        await ctx.respond(response)
+        await ctx.defer()
+        try:
+            response = await self.api.team_rank(player_name=player_name)
+            await ctx.followup.send(response)
+        except PlayerNotFoundError:
+            await ctx.followup.send(f"❌ Team rank information for player '{player_name}' not found")
+        except Exception:
+            await ctx.followup.send(f"❌ Failed to fetch team rank details for '{player_name}'. Try again later...")
 
 
 def setup(bot: discord.Bot) -> None:
