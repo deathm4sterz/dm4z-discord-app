@@ -28,4 +28,6 @@ COPY src /app/src
 
 USER botuser
 
-CMD ["python", "-m", "src.main"]
+WORKDIR /app/src
+
+CMD ["python", "-m", "main"]
