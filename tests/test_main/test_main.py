@@ -60,7 +60,7 @@ def test_main_handles_keyboard_interrupt(
         raise KeyboardInterrupt("Test interrupt")
 
     monkeypatch.setattr(main_module, "async_main", mock_async_main)
-    monkeypatch.setattr(main_module, "parse_args", lambda: Namespace())
+    monkeypatch.setattr(main_module, "parse_args", Namespace)
 
     with caplog.at_level(logging.INFO, logger=main_module.APP_LOGGER_NAME):
         main_module.main()

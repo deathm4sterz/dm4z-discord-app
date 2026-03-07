@@ -33,7 +33,7 @@ async def test_setup_hook_loads_all_extensions(
     loaded: list[str] = []
     bot = _make_bot()
     monkeypatch.setattr(bot, "load_extension", loaded.append)
-    monkeypatch.setattr(bot.db, "connect", lambda: _async_noop())
+    monkeypatch.setattr(bot.db, "connect", _async_noop)
 
     async def successful_sync():
         return ["cmd1", "cmd2"]
@@ -77,7 +77,7 @@ async def test_setup_hook_logs_sync_error(
 ) -> None:
     bot = _make_bot()
     monkeypatch.setattr(bot, "load_extension", lambda x: None)
-    monkeypatch.setattr(bot.db, "connect", lambda: _async_noop())
+    monkeypatch.setattr(bot.db, "connect", _async_noop)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
 
     async def failing_sync():
@@ -95,7 +95,7 @@ async def test_setup_hook_handles_none_sync_result(
 ) -> None:
     bot = _make_bot()
     monkeypatch.setattr(bot, "load_extension", lambda x: None)
-    monkeypatch.setattr(bot.db, "connect", lambda: _async_noop())
+    monkeypatch.setattr(bot.db, "connect", _async_noop)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
 
     async def none_sync():
@@ -117,7 +117,7 @@ async def test_setup_hook_logs_extension_loading(
 ) -> None:
     bot = _make_bot()
     monkeypatch.setattr(bot, "load_extension", lambda x: None)
-    monkeypatch.setattr(bot.db, "connect", lambda: _async_noop())
+    monkeypatch.setattr(bot.db, "connect", _async_noop)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
     monkeypatch.setattr(bot, "sync_commands", lambda: [])
     monkeypatch.setattr(
@@ -148,7 +148,7 @@ async def test_on_ready_calls_setup_if_not_complete(
     bot = _make_bot()
     bot._connection.user = SimpleNamespace(name="dm4z")
     monkeypatch.setattr(bot, "load_extension", lambda x: None)
-    monkeypatch.setattr(bot.db, "connect", lambda: _async_noop())
+    monkeypatch.setattr(bot.db, "connect", _async_noop)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
 
     async def mock_sync():
@@ -172,7 +172,7 @@ async def test_setup_hook_handles_extension_load_failure(
     caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     bot = _make_bot()
-    monkeypatch.setattr(bot.db, "connect", lambda: _async_noop())
+    monkeypatch.setattr(bot.db, "connect", _async_noop)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
 
     original_extensions = (*COMMAND_EXTENSIONS, *EVENT_EXTENSIONS)
