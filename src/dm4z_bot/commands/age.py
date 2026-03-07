@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import logging
+
 import discord
 from discord import option
+
+logger = logging.getLogger(__name__)
 
 
 class AgeCommands(discord.Cog):
@@ -16,6 +20,7 @@ class AgeCommands(discord.Cog):
         user: discord.User | None = None,
     ) -> None:
         selected_user = user or ctx.author
+        logger.debug("/age invoked by %s for user %s", ctx.author, selected_user)
         await ctx.respond(
             f"{selected_user.name}'s account was created at {selected_user.created_at}"
         )

@@ -19,7 +19,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN adduser -D botuser
+RUN adduser -D botuser \
+    && mkdir -p /app/data \
+    && chown botuser:botuser /app/data
 
 COPY --from=builder /app/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
@@ -27,6 +29,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src /app/src
 
 USER botuser
+
+VOLUME ["/app/data"]
 
 WORKDIR /app/src
 
