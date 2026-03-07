@@ -21,6 +21,7 @@ class ProfileCommands(discord.Cog):
     @option("member", discord.Member, description="Member to look up", required=False)
     async def profile(self, ctx: discord.ApplicationContext, member: discord.Member | None = None) -> None:
         target = member or ctx.author
+        logger.debug("/profile invoked by %s for %s", ctx.author, target)
         guild_id = ctx.guild_id
 
         accounts = await self.db.fetch_all(

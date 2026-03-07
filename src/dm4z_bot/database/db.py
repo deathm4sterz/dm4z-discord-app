@@ -35,22 +35,27 @@ class Database:
         return self._conn
 
     async def execute(self, sql: str, params: tuple[Any, ...] = ()) -> aiosqlite.Cursor:
+        logger.debug("SQL execute: %s | params: %s", sql.strip(), params)
         cursor = await self.conn.execute(sql, params)
         await self.conn.commit()
         return cursor
 
     async def fetch_one(self, sql: str, params: tuple[Any, ...] = ()) -> dict[str, Any] | None:
+        logger.debug("SQL fetch_one: %s | params: %s", sql.strip(), params)
         self.conn.row_factory = aiosqlite.Row
         cursor = await self.conn.execute(sql, params)
         row = await cursor.fetchone()
         if row is None:
+            logger.debug("SQL fetch_one returned no rows")
             return None
         return dict(row)
 
     async def fetch_all(self, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
+        logger.debug("SQL fetch_all: %s | params: %s", sql.strip(), params)
         self.conn.row_factory = aiosqlite.Row
         cursor = await self.conn.execute(sql, params)
         rows = await cursor.fetchall()
+        logger.debug("SQL fetch_all returned %d row(s)", len(rows))
         return [dict(r) for r in rows]
 
     async def _apply_migrations(self) -> None:

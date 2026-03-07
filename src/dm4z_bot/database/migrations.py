@@ -61,6 +61,11 @@ CREATE TABLE IF NOT EXISTS command_usage (
 );
 """
 
+MIGRATION_002 = """\
+ALTER TABLE guilds ADD COLUMN mod_channel_id INTEGER;
+"""
+
 MIGRATIONS: list[tuple[int, str]] = [
     (1, MIGRATION_001),
+    (2, MIGRATION_002),
 ]

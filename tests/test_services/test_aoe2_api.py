@@ -108,3 +108,26 @@ async def test_rank_handles_player_not_found_with_whitespace() -> None:
         with pytest.raises(PlayerNotFoundError):
             await api.rank("nonexistent_player")
 
+
+@pytest.mark.asyncio
+async def test_fetch_profile_calls_profiles_api() -> None:
+    api = Aoe2Api()
+    payload = {"name": "hjpotter92", "profileId": 1228227, "leaderboards": []}
+    with respx.mock(assert_all_called=True) as router:
+        route = router.get(
+            url__regex=r"https://data\.aoe2companion\.com/api/profiles/1228227\?.*"
+        ).respond(200, json=payload)
+        result = await api.fetch_profile("1228227")
+    assert route.called
+    assert result["name"] == "hjpotter92"
+    assert result["profileId"] == 1228227
+
+
+@pytest.mark.asyncio
+async def test_fetch_json_raises_for_http_errors() -> None:
+    api = Aoe2Api()
+    with respx.mock(assert_all_called=True) as router:
+        router.get("https://example.com/json-err").mock(return_value=Response(404))
+        with pytest.raises(Exception, match="HTTP error 404"):
+            await api.fetch_json("https://example.com/json-err")
+

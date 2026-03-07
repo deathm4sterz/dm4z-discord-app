@@ -25,8 +25,9 @@ class GuildConfigCommands(discord.Cog):
     async def enable_game(
         self, ctx: discord.ApplicationContext, game: str, channel: discord.TextChannel
     ) -> None:
+        logger.debug("/enable_game invoked by %s: game=%s, channel=%s", ctx.author, game, channel)
         if game not in self.registry:
-            await ctx.respond(f"❌ Unknown game `{game}`. Available: {', '.join(self.registry.keys())}")
+            await ctx.respond(f"❌ Unknown game `{game}`. Available: {', '.join(self.registry.keys())}", ephemeral=True)
             return
 
         guild_id = ctx.guild_id
@@ -37,12 +38,30 @@ class GuildConfigCommands(discord.Cog):
             "updated_at = datetime('now')",
             (guild_id, game, channel.id, channel.id),
         )
-        await ctx.respond(f"✅ **{game}** enabled in {channel.mention}.")
+        logger.info("Game %s enabled in guild %d, channel %d", game, guild_id, channel.id)
+        await ctx.respond(f"✅ **{game}** enabled in {channel.mention}.", ephemeral=True)
+
+    @discord.slash_command(description="Set the moderation channel for approval notifications")
+    @option("channel", discord.TextChannel, description="Channel for moderation notifications")
+    @discord.default_permissions(administrator=True)
+    async def set_mod_channel(
+        self, ctx: discord.ApplicationContext, channel: discord.TextChannel
+    ) -> None:
+        logger.debug("/set_mod_channel invoked by %s: channel=%s", ctx.author, channel)
+        guild_id = ctx.guild_id
+        await self.db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (guild_id,))
+        await self.db.execute(
+            "UPDATE guilds SET mod_channel_id = ?, updated_at = datetime('now') WHERE guild_id = ?",
+            (channel.id, guild_id),
+        )
+        logger.info("Mod channel set to %d in guild %d", channel.id, guild_id)
+        await ctx.respond(f"✅ Moderation channel set to {channel.mention}.", ephemeral=True)
 
     @discord.slash_command(description="Disable a game for this server")
     @option("game", str, description="Game key to disable")
     @discord.default_permissions(administrator=True)
     async def disable_game(self, ctx: discord.ApplicationContext, game: str) -> None:
+        logger.debug("/disable_game invoked by %s: game=%s", ctx.author, game)
         guild_id = ctx.guild_id
         result = await self.db.execute(
             "UPDATE guild_games SET enabled = 0, updated_at = datetime('now') "
@@ -50,9 +69,10 @@ class GuildConfigCommands(discord.Cog):
             (guild_id, game),
         )
         if result.rowcount:
-            await ctx.respond(f"✅ **{game}** disabled for this server.")
+            logger.info("Game %s disabled in guild %d", game, guild_id)
+            await ctx.respond(f"✅ **{game}** disabled for this server.", ephemeral=True)
         else:
-            await ctx.respond(f"❌ **{game}** was not enabled in this server.")
+            await ctx.respond(f"❌ **{game}** was not enabled in this server.", ephemeral=True)
 
 
 def setup(bot: discord.Bot) -> None:

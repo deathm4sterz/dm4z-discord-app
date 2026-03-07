@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
-from dm4z_bot.services.aoe2_api import Aoe2Api, PlayerNotFoundError
+from dm4z_bot.services.aoe2_api import Aoe2Api
+
+logger = logging.getLogger(__name__)
 
 
 class Aoe2Service:
@@ -13,19 +16,18 @@ class Aoe2Service:
         self.api = api or Aoe2Api()
 
     async def fetch_stats(self, account_identifier: str) -> dict[str, Any]:
-        try:
-            rank_text = await self.api.rank(account_identifier)
-        except PlayerNotFoundError:
-            rank_text = "N/A"
-        try:
-            team_text = await self.api.team_rank(account_identifier)
-        except PlayerNotFoundError:
-            team_text = "N/A"
-        return {"rank": rank_text, "team_rank": team_text}
+        logger.debug("Fetching AoE2 stats for account: %s", account_identifier)
+        profile = await self.api.fetch_profile(account_identifier)
+        logger.debug("AoE2 profile fetched for %s", account_identifier)
+        return profile
 
     async def validate_account(self, account_identifier: str) -> str | None:
+        logger.debug("Validating AoE2 account: %s", account_identifier)
         try:
-            await self.api.rank(account_identifier)
-            return account_identifier
-        except (PlayerNotFoundError, Exception):
+            profile = await self.api.fetch_profile(account_identifier)
+            name = profile.get("name")
+            logger.debug("AoE2 account validated: %s (name=%s)", account_identifier, name)
+            return name or account_identifier
+        except Exception:
+            logger.debug("AoE2 account validation failed: %s", account_identifier)
             return None

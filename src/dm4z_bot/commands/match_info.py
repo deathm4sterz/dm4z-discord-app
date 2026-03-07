@@ -22,12 +22,14 @@ class MatchInfoCommands(discord.Cog):
         ctx: discord.ApplicationContext,
         match_id: str,
     ) -> None:
+        logger.debug("/match_info invoked by %s with input: %s", ctx.author, match_id)
         extracted_id = extract_match_id(match_id)
         if not extracted_id:
-            logger.error("Invalid input for match_id: %s", match_id)
+            logger.warning("Could not extract match ID from input: %s", match_id)
             await ctx.respond("No 9-digit match ID found in the input.")
             return
 
+        logger.debug("Extracted match ID: %s", extracted_id)
         await ctx.respond(
             build_match_response_text(extracted_id),
             view=build_match_view(extracted_id),

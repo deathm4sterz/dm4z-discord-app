@@ -17,14 +17,15 @@ class LeaderboardCommands(discord.Cog):
 
     @discord.slash_command(description="Show server-local leaderboard")
     async def leaderboard(self, ctx: discord.ApplicationContext) -> None:
+        logger.debug("/leaderboard invoked by %s", ctx.author)
         await ctx.defer()
 
         try:
             response = await self.api.leaderboard()
             await ctx.followup.send(response)
         except Exception as e:
-            await ctx.followup.send("❌ Failed to fetch leaderboard data. Please try again later.")
             logger.error("Leaderboard command failed: %s", e)
+            await ctx.followup.send("❌ Failed to fetch leaderboard data. Please try again later.")
 
 
 def setup(bot: discord.Bot) -> None:

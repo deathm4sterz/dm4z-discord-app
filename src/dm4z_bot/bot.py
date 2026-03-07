@@ -101,6 +101,10 @@ class Dm4zBot(discord.Bot):
     async def _before_invoke_hook(self, ctx: discord.ApplicationContext) -> None:
         if ctx.guild_id is None:
             return
+        logger.debug(
+            "Command /%s invoked by %s in guild %d",
+            ctx.command.qualified_name, ctx.author, ctx.guild_id,
+        )
         try:
             await self.db.execute(
                 "INSERT INTO command_usage (guild_id, member_id, command_name) VALUES (?, ?, ?)",
@@ -110,6 +114,7 @@ class Dm4zBot(discord.Bot):
             logger.exception("Failed to track command usage")
 
     async def close(self) -> None:
+        logger.info("Bot shutting down")
         self.stat_fetcher.stop()
         await self.db.close()
         await super().close()

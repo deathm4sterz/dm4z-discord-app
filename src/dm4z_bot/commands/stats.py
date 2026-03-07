@@ -26,6 +26,7 @@ class StatsCommands(discord.Cog):
         self, ctx: discord.ApplicationContext, game: str, member: discord.Member | None = None
     ) -> None:
         target = member or ctx.author
+        logger.debug("/stats invoked by %s: game=%s, target=%s", ctx.author, game, target)
         guild_id = ctx.guild_id
 
         row = await self.db.fetch_one(

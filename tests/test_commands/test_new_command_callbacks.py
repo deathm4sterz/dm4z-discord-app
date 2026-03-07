@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from dm4z_bot.commands.approve import ApproveCommands
+from dm4z_bot.commands.approve import ApprovalView, ApproveCommands, send_mod_notification
 from dm4z_bot.commands.guild_config import GuildConfigCommands
 from dm4z_bot.commands.link import LinkCommands
 from dm4z_bot.commands.profile import ProfileCommands
@@ -20,7 +20,7 @@ class FakeContext:
         self.responses: list[tuple[str, object | None]] = []
         self.followup = self
 
-    async def respond(self, content: str, view: object | None = None) -> None:
+    async def respond(self, content: str, view: object | None = None, **kwargs: object) -> None:
         self.responses.append((content, view))
 
     async def defer(self) -> None:
@@ -28,6 +28,21 @@ class FakeContext:
 
     async def send(self, content: str, view: object | None = None) -> None:
         self.responses.append((content, view))
+
+
+class FakeInteraction:
+    def __init__(self, *, manage_roles: bool = True, user_id: int = 300) -> None:
+        perms = SimpleNamespace(manage_roles=manage_roles)
+        self.user = SimpleNamespace(id=user_id, mention=f"<@{user_id}>", guild_permissions=perms)
+        self.response = self
+        self.sent: list[tuple[str, dict]] = []
+        self.edited: list[tuple[str, object | None]] = []
+
+    async def send_message(self, content: str, **kwargs: object) -> None:
+        self.sent.append((content, kwargs))
+
+    async def edit_message(self, content: str, view: object | None = None, **kwargs: object) -> None:
+        self.edited.append((content, view))
 
 
 class FakeService:
@@ -105,6 +120,21 @@ async def test_link_updates_existing(memory_db: Database) -> None:
         (100, 1, "testgame"),
     )
     assert row["account_identifier"] == "acc2"
+
+
+@pytest.mark.asyncio
+async def test_link_mod_notification_failure_does_not_break(memory_db: Database) -> None:
+    await memory_db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (1,))
+    await memory_db.execute("UPDATE guilds SET mod_channel_id = 888 WHERE guild_id = 1")
+
+    def bad_get_channel(_cid: int) -> None:
+        raise RuntimeError("boom")
+
+    bot = SimpleNamespace(get_channel=bad_get_channel)
+    ctx = FakeContext()
+    cog = LinkCommands(bot=bot, db=memory_db, registry=_make_registry())
+    await LinkCommands.link.callback(cog, ctx, "testgame", "myacc")
+    assert "submitted" in ctx.responses[0][0].lower()
 
 
 @pytest.mark.asyncio
@@ -221,6 +251,130 @@ async def test_pending_empty(memory_db: Database) -> None:
     cog = ApproveCommands(bot=SimpleNamespace(), db=memory_db)
     await ApproveCommands.pending.callback(cog, ctx, None)
     assert "No pending" in ctx.responses[0][0]
+
+
+# --- Approval button tests ---
+
+
+@pytest.mark.asyncio
+async def test_approve_button_no_permission(memory_db: Database) -> None:
+    await _insert_pending_account(memory_db, 200, 1, "testgame", "acc1")
+    row = await memory_db.fetch_one("SELECT id FROM game_accounts WHERE member_id = 200")
+
+    view = ApprovalView(memory_db, row["id"], 200, "testgame", "acc1")
+    interaction = FakeInteraction(manage_roles=False)
+    await view.approve_button.callback(interaction)
+
+    assert "don't have permission" in interaction.sent[0][0]
+
+
+@pytest.mark.asyncio
+async def test_deny_button_no_permission(memory_db: Database) -> None:
+    await _insert_pending_account(memory_db, 200, 1, "testgame", "acc1")
+    row = await memory_db.fetch_one("SELECT id FROM game_accounts WHERE member_id = 200")
+
+    view = ApprovalView(memory_db, row["id"], 200, "testgame", "acc1")
+    interaction = FakeInteraction(manage_roles=False)
+    await view.deny_button.callback(interaction)
+
+    assert "don't have permission" in interaction.sent[0][0]
+
+
+@pytest.mark.asyncio
+async def test_approve_button_success(memory_db: Database) -> None:
+    await _insert_pending_account(memory_db, 200, 1, "testgame", "acc1")
+    row = await memory_db.fetch_one("SELECT id FROM game_accounts WHERE member_id = 200")
+
+    view = ApprovalView(memory_db, row["id"], 200, "testgame", "acc1")
+    interaction = FakeInteraction(manage_roles=True)
+    await view.approve_button.callback(interaction)
+
+    assert "Approved" in interaction.edited[0][0]
+    db_row = await memory_db.fetch_one("SELECT status FROM game_accounts WHERE id = ?", (row["id"],))
+    assert db_row["status"] == "approved"
+
+
+@pytest.mark.asyncio
+async def test_deny_button_success(memory_db: Database) -> None:
+    await _insert_pending_account(memory_db, 200, 1, "testgame", "acc1")
+    row = await memory_db.fetch_one("SELECT id FROM game_accounts WHERE member_id = 200")
+
+    view = ApprovalView(memory_db, row["id"], 200, "testgame", "acc1")
+    interaction = FakeInteraction(manage_roles=True)
+    await view.deny_button.callback(interaction)
+
+    assert "Denied" in interaction.edited[0][0]
+    db_row = await memory_db.fetch_one("SELECT status FROM game_accounts WHERE id = ?", (row["id"],))
+    assert db_row["status"] == "rejected"
+
+
+@pytest.mark.asyncio
+async def test_approve_button_already_handled(memory_db: Database) -> None:
+    await _insert_pending_account(memory_db, 200, 1, "testgame", "acc1")
+    row = await memory_db.fetch_one("SELECT id FROM game_accounts WHERE member_id = 200")
+    await memory_db.execute("UPDATE game_accounts SET status = 'approved' WHERE id = ?", (row["id"],))
+
+    view = ApprovalView(memory_db, row["id"], 200, "testgame", "acc1")
+    interaction = FakeInteraction(manage_roles=True)
+    await view.approve_button.callback(interaction)
+
+    assert "already been handled" in interaction.sent[0][0]
+
+
+@pytest.mark.asyncio
+async def test_deny_button_already_handled(memory_db: Database) -> None:
+    await _insert_pending_account(memory_db, 200, 1, "testgame", "acc1")
+    row = await memory_db.fetch_one("SELECT id FROM game_accounts WHERE member_id = 200")
+    await memory_db.execute("UPDATE game_accounts SET status = 'rejected' WHERE id = ?", (row["id"],))
+
+    view = ApprovalView(memory_db, row["id"], 200, "testgame", "acc1")
+    interaction = FakeInteraction(manage_roles=True)
+    await view.deny_button.callback(interaction)
+
+    assert "already been handled" in interaction.sent[0][0]
+
+
+# --- send_mod_notification tests ---
+
+
+class FakeChannel:
+    def __init__(self) -> None:
+        self.messages: list[tuple[str, object | None]] = []
+
+    async def send(self, content: str, view: object | None = None) -> None:
+        self.messages.append((content, view))
+
+
+@pytest.mark.asyncio
+async def test_send_mod_notification_no_guild_row(memory_db: Database) -> None:
+    bot = SimpleNamespace(get_channel=lambda _: None)
+    await send_mod_notification(bot, memory_db, 1, 200, "testgame", "acc1", 1)
+
+
+@pytest.mark.asyncio
+async def test_send_mod_notification_no_mod_channel_id(memory_db: Database) -> None:
+    await memory_db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (1,))
+    bot = SimpleNamespace(get_channel=lambda _: None)
+    await send_mod_notification(bot, memory_db, 1, 200, "testgame", "acc1", 1)
+
+
+@pytest.mark.asyncio
+async def test_send_mod_notification_channel_not_found(memory_db: Database) -> None:
+    await memory_db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (1,))
+    await memory_db.execute("UPDATE guilds SET mod_channel_id = 999 WHERE guild_id = 1")
+    bot = SimpleNamespace(get_channel=lambda _: None)
+    await send_mod_notification(bot, memory_db, 1, 200, "testgame", "acc1", 1)
+
+
+@pytest.mark.asyncio
+async def test_send_mod_notification_success(memory_db: Database) -> None:
+    await memory_db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (1,))
+    await memory_db.execute("UPDATE guilds SET mod_channel_id = 888 WHERE guild_id = 1")
+    channel = FakeChannel()
+    bot = SimpleNamespace(get_channel=lambda cid: channel if cid == 888 else None)
+    await send_mod_notification(bot, memory_db, 1, 200, "testgame", "acc1", 42)
+    assert len(channel.messages) == 1
+    assert "New link request" in channel.messages[0][0]
 
 
 # --- Profile command tests ---
@@ -355,6 +509,18 @@ async def test_disable_game_success(memory_db: Database) -> None:
     ctx2 = FakeContext()
     await GuildConfigCommands.disable_game.callback(cog, ctx2, "testgame")
     assert "disabled" in ctx2.responses[0][0].lower()
+
+
+@pytest.mark.asyncio
+async def test_set_mod_channel(memory_db: Database) -> None:
+    ctx = FakeContext()
+    channel = SimpleNamespace(id=777, mention="#mod-channel")
+    cog = GuildConfigCommands(bot=SimpleNamespace(), db=memory_db, registry=_make_registry())
+    await GuildConfigCommands.set_mod_channel.callback(cog, ctx, channel)
+    assert "Moderation channel set" in ctx.responses[0][0]
+
+    row = await memory_db.fetch_one("SELECT mod_channel_id FROM guilds WHERE guild_id = 1")
+    assert row["mod_channel_id"] == 777
 
 
 @pytest.mark.asyncio

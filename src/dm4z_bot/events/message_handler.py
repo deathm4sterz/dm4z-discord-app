@@ -23,12 +23,13 @@ class MessageEvents(discord.Cog):
         if "aoe2de" not in message_content_lower:
             return
 
+        logger.debug("Detected aoe2de keyword in message from %s", message.author)
         extracted_id = extract_match_id(message_content_lower)
         if not extracted_id:
-            logger.error("Failed to find aoe2de link in %s", message.content)
+            logger.debug("No match ID found in aoe2de message: %s", message.content)
             return
 
-        logger.info("Received aoe2de link %s", message.content)
+        logger.info("Extracted match ID %s from message by %s", extracted_id, message.author)
         await message.channel.send(
             build_match_response_text(extracted_id),
             view=build_match_view(extracted_id),

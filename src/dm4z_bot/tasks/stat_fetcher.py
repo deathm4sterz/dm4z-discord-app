@@ -29,8 +29,13 @@ class StatFetcher:
         for account in accounts:
             service = self.registry.get(account["game"])
             if service is None:
+                logger.debug("No service registered for game: %s, skipping account %d", account["game"], account["id"])
                 continue
             try:
+                logger.debug(
+                    "Fetching stats for account %d (%s / %s)",
+                    account["id"], account["game"], account["account_identifier"],
+                )
                 stats = await service.fetch_stats(account["account_identifier"])
                 stats_json = json.dumps(stats)
                 existing = await self.db.fetch_one(
@@ -42,18 +47,22 @@ class StatFetcher:
                         "UPDATE game_stats SET stats_json = ?, updated_at = datetime('now') WHERE id = ?",
                         (stats_json, existing["id"]),
                     )
+                    logger.debug("Updated stats for account %d", account["id"])
                 else:
                     await self.db.execute(
                         "INSERT INTO game_stats (game_account_id, stats_json) VALUES (?, ?)",
                         (account["id"], stats_json),
                     )
+                    logger.debug("Inserted new stats for account %d", account["id"])
             except Exception:
                 logger.exception("Failed to fetch stats for account %d (%s)", account["id"], account["game"])
 
     def start(self) -> None:
         if not self.fetch_loop.is_running():
+            logger.info("Starting stat fetcher loop")
             self.fetch_loop.start()
 
     def stop(self) -> None:
         if self.fetch_loop.is_running():
+            logger.info("Stopping stat fetcher loop")
             self.fetch_loop.cancel()
