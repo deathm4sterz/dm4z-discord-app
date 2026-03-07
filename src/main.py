@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from argparse import ArgumentParser, Namespace
 
 from dm4z_bot.bot import Dm4zBot
 from dm4z_bot.config import load_settings
@@ -20,20 +21,29 @@ def configure_logging(level: str) -> None:
         app_logger.addHandler(handler)
 
 
-async def async_main() -> None:
-    settings = load_settings()
+def parse_args() -> Namespace:
+    parser = ArgumentParser(description="dm4z Discord bot")
+    parser.add_argument("--discord-token", default=None)
+    parser.add_argument("--log-level", default=None)
+    parser.add_argument("--debug-guild-id", type=int, default=None)
+    parser.add_argument("--database-path", default=None)
+    return parser.parse_args()
+
+
+async def async_main(cli_args: Namespace | None = None) -> None:
+    settings = load_settings(cli_args)
     configure_logging(settings.log_level)
-    bot = Dm4zBot()
+    bot = Dm4zBot(settings)
     await bot.start(settings.discord_token)
 
 
 def main() -> None:
     try:
-        asyncio.run(async_main())
+        args = parse_args()
+        asyncio.run(async_main(args))
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
 
 
 if __name__ == "__main__":  # pragma: no cover
     main()
-

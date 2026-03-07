@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from argparse import Namespace
 from types import SimpleNamespace
 
 import pytest
@@ -31,11 +32,14 @@ def test_configure_logging_does_not_duplicate_handlers() -> None:
 
 @pytest.mark.asyncio
 async def test_async_main_loads_settings_and_starts_bot(monkeypatch: pytest.MonkeyPatch) -> None:
-    settings = SimpleNamespace(discord_token="token", log_level="INFO")
-    monkeypatch.setattr(main_module, "load_settings", lambda: settings)
+    settings = SimpleNamespace(discord_token="token", log_level="INFO", database_path=":memory:")
+    monkeypatch.setattr(main_module, "load_settings", lambda cli_args=None: settings)
     called: list[tuple[str, str]] = []
 
     class FakeBot:
+        def __init__(self, settings: object) -> None:
+            pass
+
         async def start(self, token: str) -> None:
             called.append(("start", token))
 
@@ -52,13 +56,37 @@ async def test_async_main_loads_settings_and_starts_bot(monkeypatch: pytest.Monk
 def test_main_handles_keyboard_interrupt(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    async def mock_async_main() -> None:
+    async def mock_async_main(cli_args: Namespace | None = None) -> None:
         raise KeyboardInterrupt("Test interrupt")
 
     monkeypatch.setattr(main_module, "async_main", mock_async_main)
+    monkeypatch.setattr(main_module, "parse_args", lambda: Namespace())
 
     with caplog.at_level(logging.INFO, logger=main_module.APP_LOGGER_NAME):
         main_module.main()
 
     assert "Bot stopped by user" in caplog.text
 
+
+def test_parse_args_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.argv", ["main.py"])
+    args = main_module.parse_args()
+    assert args.discord_token is None
+    assert args.log_level is None
+    assert args.debug_guild_id is None
+    assert args.database_path is None
+
+
+def test_parse_args_with_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "main.py", "--discord-token", "tok", "--log-level", "DEBUG",
+            "--debug-guild-id", "42", "--database-path", "/x.db",
+        ],
+    )
+    args = main_module.parse_args()
+    assert args.discord_token == "tok"
+    assert args.log_level == "DEBUG"
+    assert args.debug_guild_id == 42
+    assert args.database_path == "/x.db"

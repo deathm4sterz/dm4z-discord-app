@@ -7,10 +7,11 @@ readme = "README.md"
 packages = [{ include = "dm4z_bot", from = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.12"
-py-cord = "^2.6.1"
+python = ">=3.13,<3.14"
+py-cord = "^2.7.1"
 httpx = "^0.28.1"
 python-dotenv = "^1.1.1"
+aiosqlite = "^0.22.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.1"

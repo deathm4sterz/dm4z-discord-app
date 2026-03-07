@@ -6,5 +6,10 @@ services:
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_PATH: /app/data/dm4z_bot.db
+    volumes:
+      - bot-data:/app/data
     restart: unless-stopped
 
+volumes:
+  bot-data:
