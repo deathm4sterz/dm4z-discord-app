@@ -14,7 +14,7 @@ poetry run pytest           # Must show 100% coverage, ~29 tests pass
 
 **Alternative (virtualenv):**
 ```bash
-. pyvenv/Scripts/activate
+. .venv/Scripts/activate
 PYTHONPATH=src python -m ruff check .
 PYTHONPATH=src python -m pytest -q
 ```

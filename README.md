@@ -47,13 +47,15 @@ poetry run ruff check .
 poetry run pytest
 ```
 
-If you are using the project virtualenv (`pyvenv`) directly:
+If you are using the project virtualenv (`.venv`) directly:
 
 ```bash
-. pyvenv/Scripts/activate
+. .venv/Scripts/activate
 PYTHONPATH=src python -m ruff check .
 PYTHONPATH=src python -m pytest -q
 ```
+
+> **Note:** `.venv` is the preferred virtual environment directory for this project.
 
 ### Reviewing Results
 
