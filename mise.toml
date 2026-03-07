@@ -1,0 +1,4 @@
+[tools]
+python = "3.13"
+poetry = "latest"
+direnv = "2.32.2"

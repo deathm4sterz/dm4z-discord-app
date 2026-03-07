@@ -1,0 +1,39 @@
+root = true
+
+# Top-level settings
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+indent_style = space
+indent_size = 4
+
+# Max line length matches Ruff/Pyproject
+max_line_length = 120
+
+# Python source files
+[*.py]
+indent_style = space
+indent_size = 4
+
+# Markdown and config files
+[*.md]
+trim_trailing_whitespace = false
+insert_final_newline = true
+
+[*.toml]
+indent_style = space
+indent_size = 4
+
+[*.yml]
+indent_style = space
+indent_size = 2
+
+# Ignore virtual environments
+[pyvenv/**]
+trim_trailing_whitespace = false
+insert_final_newline = false
+indent_style = space
+indent_size = 4
