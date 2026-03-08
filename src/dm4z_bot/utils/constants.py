@@ -11,7 +11,6 @@ PLAYER_IDS: tuple[str, ...] = (
     "5968579",  # N.O.P.E
 )
 
-NIGHTBOT_API_URL = "https://data.aoe2companion.com/api/nightbot/rank"
 PROFILE_API_URL = "https://data.aoe2companion.com/api/profiles"
 LEADERBOARD_URL_TEMPLATE = (
     "https://www.aoe2insights.com/nightbot/leaderboard/3/"

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dm4z_bot.commands import age, approve, guild_config, leaderboard, link, match_info, profile, rank, stats, team_rank
+from dm4z_bot.commands import age, approve, guild_config, leaderboard, link, match_info, profile, rank, stats
 from dm4z_bot.database.db import Database
 from dm4z_bot.services.aoe2_api import Aoe2Api
 from dm4z_bot.services.games.aoe2_service import Aoe2Service
@@ -26,7 +26,6 @@ def test_setup_registers_all_command_cogs() -> None:
     age.setup(bot)  # type: ignore[arg-type]
     match_info.setup(bot)  # type: ignore[arg-type]
     rank.setup(bot)  # type: ignore[arg-type]
-    team_rank.setup(bot)  # type: ignore[arg-type]
     leaderboard.setup(bot)  # type: ignore[arg-type]
     link.setup(bot)  # type: ignore[arg-type]
     approve.setup(bot)  # type: ignore[arg-type]
@@ -37,7 +36,6 @@ def test_setup_registers_all_command_cogs() -> None:
         "AgeCommands",
         "MatchInfoCommands",
         "RankCommands",
-        "TeamRankCommands",
         "LeaderboardCommands",
         "LinkCommands",
         "ApproveCommands",

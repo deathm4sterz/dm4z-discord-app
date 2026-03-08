@@ -3,31 +3,7 @@ import pytest
 import respx
 from httpx import Response
 
-from dm4z_bot.services.aoe2_api import Aoe2Api, PlayerNotFoundError
-
-
-@pytest.mark.asyncio
-async def test_rank_calls_nightbot_api() -> None:
-    api = Aoe2Api()
-    with respx.mock(assert_all_called=True) as router:
-        route = router.get(url__regex=r"https://data\.aoe2companion\.com/api/nightbot/rank.*").respond(
-            200, text="rank response"
-        )
-        response = await api.rank("deadmeat")
-    assert route.called
-    assert response == "rank response"
-
-
-@pytest.mark.asyncio
-async def test_team_rank_calls_nightbot_api() -> None:
-    api = Aoe2Api()
-    with respx.mock(assert_all_called=True) as router:
-        route = router.get(url__regex=r"https://data\.aoe2companion\.com/api/nightbot/rank.*").respond(
-            200, text="team response"
-        )
-        response = await api.team_rank("deadmeat")
-    assert route.called
-    assert response == "team response"
+from dm4z_bot.services.aoe2_api import Aoe2Api
 
 
 @pytest.mark.asyncio
@@ -73,43 +49,6 @@ async def test_fetch_text_raises_for_general_errors() -> None:
 
 
 @pytest.mark.asyncio
-async def test_rank_raises_player_not_found_error() -> None:
-    api = Aoe2Api()
-    with respx.mock(assert_all_called=True) as router:
-        router.get(url__regex=r"https://data\.aoe2companion\.com/api/nightbot/rank.*").respond(
-            200, text="Player not found"
-        )
-        with pytest.raises(PlayerNotFoundError) as exc_info:
-            await api.rank("nonexistent_player")
-        assert exc_info.value.player_name == "nonexistent_player"
-        assert exc_info.value.command_type == "Rank information"
-
-
-@pytest.mark.asyncio
-async def test_team_rank_raises_player_not_found_error() -> None:
-    api = Aoe2Api()
-    with respx.mock(assert_all_called=True) as router:
-        router.get(url__regex=r"https://data\.aoe2companion\.com/api/nightbot/rank.*").respond(
-            200, text="Player not found"
-        )
-        with pytest.raises(PlayerNotFoundError) as exc_info:
-            await api.team_rank("nonexistent_player")
-        assert exc_info.value.player_name == "nonexistent_player"
-        assert exc_info.value.command_type == "Team rank information"
-
-
-@pytest.mark.asyncio
-async def test_rank_handles_player_not_found_with_whitespace() -> None:
-    api = Aoe2Api()
-    with respx.mock(assert_all_called=True) as router:
-        router.get(url__regex=r"https://data\.aoe2companion\.com/api/nightbot/rank.*").respond(
-            200, text="  Player not found  "
-        )
-        with pytest.raises(PlayerNotFoundError):
-            await api.rank("nonexistent_player")
-
-
-@pytest.mark.asyncio
 async def test_fetch_profile_calls_profiles_api() -> None:
     api = Aoe2Api()
     payload = {"name": "hjpotter92", "profileId": 1228227, "leaderboards": []}
@@ -131,3 +70,27 @@ async def test_fetch_json_raises_for_http_errors() -> None:
         with pytest.raises(Exception, match="HTTP error 404"):
             await api.fetch_json("https://example.com/json-err")
 
+
+@pytest.mark.asyncio
+async def test_search_profiles_calls_profiles_api() -> None:
+    api = Aoe2Api()
+    payload = {"profiles": [{"name": "Kratos", "profileId": 9997875}]}
+    with respx.mock(assert_all_called=True) as router:
+        route = router.get(
+            url__regex=r"https://data\.aoe2companion\.com/api/profiles\?.*search=Kratos.*"
+        ).respond(200, json=payload)
+        result = await api.search_profiles("Kratos")
+    assert route.called
+    assert result["profiles"][0]["name"] == "Kratos"
+
+
+@pytest.mark.asyncio
+async def test_search_profiles_empty_results() -> None:
+    api = Aoe2Api()
+    payload = {"profiles": []}
+    with respx.mock(assert_all_called=True) as router:
+        router.get(
+            url__regex=r"https://data\.aoe2companion\.com/api/profiles\?.*search=nobody.*"
+        ).respond(200, json=payload)
+        result = await api.search_profiles("nobody")
+    assert result["profiles"] == []

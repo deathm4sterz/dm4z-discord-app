@@ -18,7 +18,6 @@ COMMAND_EXTENSIONS: tuple[str, ...] = (
     "dm4z_bot.commands.age",
     "dm4z_bot.commands.match_info",
     "dm4z_bot.commands.rank",
-    "dm4z_bot.commands.team_rank",
     "dm4z_bot.commands.leaderboard",
     "dm4z_bot.commands.link",
     "dm4z_bot.commands.approve",
