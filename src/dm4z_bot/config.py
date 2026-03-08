@@ -13,6 +13,7 @@ class Settings:
     log_level: str = "INFO"
     debug_guild_id: int | None = None
     database_path: str = "dm4z_bot.db"
+    leetify_api_key: str | None = None
 
 
 def _resolve(cli_args: Namespace | None, attr: str, env_key: str, default: str | None = None) -> str | None:
@@ -39,9 +40,12 @@ def load_settings(cli_args: Namespace | None = None) -> Settings:
 
     database_path = _resolve(cli_args, "database_path", "DATABASE_PATH", "dm4z_bot.db")
 
+    leetify_api_key = _resolve(cli_args, "leetify_api_key", "LEETIFY_API_KEY")
+
     return Settings(
         discord_token=token,
         log_level=log_level.upper() if log_level else "INFO",
         debug_guild_id=debug_guild_id,
         database_path=database_path or "dm4z_bot.db",
+        leetify_api_key=leetify_api_key,
     )

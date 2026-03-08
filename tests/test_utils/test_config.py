@@ -37,18 +37,22 @@ def test_load_settings_env_database_path(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_load_settings_cli_overrides_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DISCORD_TOKEN", "env_token")
     monkeypatch.setenv("LOG_LEVEL", "WARNING")
-    cli = Namespace(discord_token="cli_token", log_level="error", debug_guild_id=999, database_path="/cli.db")
+    cli = Namespace(
+        discord_token="cli_token", log_level="error", debug_guild_id=999,
+        database_path="/cli.db", leetify_api_key="cli-key",
+    )
     settings = load_settings(cli)
     assert settings.discord_token == "cli_token"
     assert settings.log_level == "ERROR"
     assert settings.debug_guild_id == 999
     assert settings.database_path == "/cli.db"
+    assert settings.leetify_api_key == "cli-key"
 
 
 def test_load_settings_cli_none_falls_through_to_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DISCORD_TOKEN", "env_token")
     monkeypatch.setenv("LOG_LEVEL", "DEBUG")
-    cli = Namespace(discord_token=None, log_level=None, debug_guild_id=None, database_path=None)
+    cli = Namespace(discord_token=None, log_level=None, debug_guild_id=None, database_path=None, leetify_api_key=None)
     settings = load_settings(cli)
     assert settings.discord_token == "env_token"
     assert settings.log_level == "DEBUG"
@@ -59,3 +63,17 @@ def test_load_settings_debug_guild_id_from_env(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("DEBUG_GUILD_ID", "12345")
     settings = load_settings()
     assert settings.debug_guild_id == 12345
+
+
+def test_load_settings_leetify_api_key_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DISCORD_TOKEN", "tok")
+    monkeypatch.setenv("LEETIFY_API_KEY", "my-leetify-key")
+    settings = load_settings()
+    assert settings.leetify_api_key == "my-leetify-key"
+
+
+def test_load_settings_leetify_api_key_default_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DISCORD_TOKEN", "tok")
+    monkeypatch.delenv("LEETIFY_API_KEY", raising=False)
+    settings = load_settings()
+    assert settings.leetify_api_key is None

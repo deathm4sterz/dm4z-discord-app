@@ -53,7 +53,7 @@ class Dm4zBot(discord.Bot):
         self.db = Database(settings.database_path)
         self.game_registry = GameRegistry()
         self.game_registry.register(Aoe2Service(self.aoe2_api))
-        self.game_registry.register(Cs2Service())
+        self.game_registry.register(Cs2Service(api_key=settings.leetify_api_key))
         self.stat_fetcher = StatFetcher(self.db, self.game_registry)
         self._setup_complete = False
         self.before_invoke(self._before_invoke_hook)
