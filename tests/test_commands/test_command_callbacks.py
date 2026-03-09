@@ -172,7 +172,7 @@ async def test_rank_profile_id_responds_with_embeds() -> None:
     await RankCommands.rank.callback(cog, ctx, player_name=None, profile_id=1228227)
     resp = ctx.responses[0]
     assert resp["embeds"] is not None
-    assert len(resp["embeds"]) == 3
+    assert len(resp["embeds"]) == 1
 
 
 @pytest.mark.asyncio
@@ -225,7 +225,7 @@ async def test_rank_linked_account_responds_with_embeds() -> None:
     await RankCommands.rank.callback(cog, ctx, player_name=None, profile_id=None)
     resp = ctx.responses[0]
     assert resp["embeds"] is not None
-    assert len(resp["embeds"]) == 3
+    assert len(resp["embeds"]) == 1
 
 
 @pytest.mark.asyncio
@@ -265,9 +265,11 @@ def test_build_profile_embeds_header() -> None:
 
 def test_build_profile_embeds_active_and_inactive() -> None:
     embeds = build_profile_embeds(SAMPLE_PROFILE)
-    assert len(embeds) == 3
-    assert embeds[1].color.value == 0x3498DB
-    assert embeds[2].color.value == 0x95A5A6
+    assert len(embeds) == 1
+    fields = embeds[0].fields
+    assert len(fields) == 2
+    assert ":green_circle:" in fields[0].name
+    assert ":red_circle:" in fields[1].name
 
 
 def test_build_profile_embeds_no_clan() -> None:
@@ -305,8 +307,9 @@ def test_build_profile_embeds_only_active() -> None:
         "leaderboards": [lb for lb in SAMPLE_PROFILE["leaderboards"] if lb["active"]],
     }
     embeds = build_profile_embeds(profile)
-    assert len(embeds) == 2
-    assert embeds[1].color.value == 0x3498DB
+    assert len(embeds) == 1
+    assert len(embeds[0].fields) == 1
+    assert ":green_circle:" in embeds[0].fields[0].name
 
 
 def test_build_profile_embeds_only_inactive() -> None:
@@ -315,8 +318,9 @@ def test_build_profile_embeds_only_inactive() -> None:
         "leaderboards": [lb for lb in SAMPLE_PROFILE["leaderboards"] if not lb["active"]],
     }
     embeds = build_profile_embeds(profile)
-    assert len(embeds) == 2
-    assert embeds[1].color.value == 0x95A5A6
+    assert len(embeds) == 1
+    assert len(embeds[0].fields) == 1
+    assert ":red_circle:" in embeds[0].fields[0].name
 
 
 def test_build_profile_embeds_no_avatar() -> None:

@@ -8,12 +8,9 @@ from discord import option
 
 from dm4z_bot.database.db import Database
 from dm4z_bot.services.aoe2_api import Aoe2Api
+from dm4z_bot.utils.constants import PLATFORM_ICONS
 
 logger = logging.getLogger(__name__)
-
-COLOR_ACTIVE = 0x3498DB
-COLOR_INACTIVE = 0x95A5A6
-
 
 def _country_flag(profile: dict[str, Any]) -> str:
     if icon := profile.get("countryIcon"):
@@ -36,57 +33,38 @@ def build_profile_embeds(profile: dict[str, Any]) -> list[discord.Embed]:
     if flag:
         author_text = f"{author_text} {flag}"
 
-    header = discord.Embed(description="\U0001f535 Blue = active season \u2502 \u26aa Gray = inactive season")
+    embed = discord.Embed()
     if avatar:
-        header.set_author(name=author_text, icon_url=avatar)
+        embed.set_author(name=author_text, icon_url=avatar)
+        embed.set_thumbnail(url=avatar)
     else:
-        header.set_author(name=author_text)
-    if avatar:
-        header.set_thumbnail(url=avatar)
-    header.set_footer(text=f"Platform: {platform} | Profile ID: {profile_id}")
+        embed.set_author(name=author_text)
 
-    leaderboards: list[dict[str, Any]] = profile.get("leaderboards", [])
-    active_fields: list[tuple[str, str]] = []
-    inactive_fields: list[tuple[str, str]] = []
-
-    for lb in leaderboards:
+    for lb in profile.get("leaderboards", []):
         if lb.get("games", 0) == 0:
             continue
         abbr = lb.get("abbreviation", lb.get("leaderboardId", "?"))
-        rating = lb.get("rating", "?")
-        peak = lb.get("maxRating", "?")
-        rank = lb.get("rank", "?")
-        country_rank = lb.get("rankCountry", "?")
-        wins = lb.get("wins", 0)
-        losses = lb.get("losses", 0)
-        streak = lb.get("streak", 0)
-
+        status = ":green_circle:" if lb.get("active") else ":red_circle:"
         value = (
-            f"Rating: {rating} | Peak: {peak}\n"
-            f"Rank: #{rank} | Country: #{country_rank}\n"
-            f"{wins}W-{losses}L | Streak: {streak}"
+            f"**Rating**\n"
+            f"Current: {lb.get('rating', '?')}\n"
+            f"Peak: {lb.get('maxRating', '?')}\n\n"
+            f"**Rank**\n"
+            f"Global: #{lb.get('rank', '?')}\n"
+            f"Country: #{lb.get('rankCountry', '?')}\n\n"
+            f"**Performance**\n"
+            f"Win: {lb.get('wins', 0)}\n"
+            f"Loss: {lb.get('losses', 0)}\n"
+            f"Streak: {lb.get('streak', 0)}"
         )
+        embed.add_field(name=f"{status} {abbr}", value=value, inline=True)
 
-        if lb.get("active"):
-            active_fields.append((abbr, value))
-        else:
-            inactive_fields.append((abbr, value))
-
-    embeds = [header]
-
-    if active_fields:
-        active_embed = discord.Embed(title="Active Leaderboards", color=COLOR_ACTIVE)
-        for field_name, field_value in active_fields:
-            active_embed.add_field(name=field_name, value=field_value, inline=True)
-        embeds.append(active_embed)
-
-    if inactive_fields:
-        inactive_embed = discord.Embed(title="Inactive Leaderboards", color=COLOR_INACTIVE)
-        for field_name, field_value in inactive_fields:
-            inactive_embed.add_field(name=field_name, value=field_value, inline=True)
-        embeds.append(inactive_embed)
-
-    return embeds
+    footer_icon = PLATFORM_ICONS.get(platform.lower())
+    embed.set_footer(
+        text=f"Platform: {platform} | Profile ID: {profile_id}",
+        icon_url=footer_icon,
+    )
+    return [embed]
 
 
 class ProfileSelectView(discord.ui.View):
@@ -98,8 +76,7 @@ class ProfileSelectView(discord.ui.View):
             clan = p.get("clan")
             name = p.get("name", "Unknown")
             label = f"[{clan}] {name}" if clan else name
-            code = p.get("country")
-            flag = f":flag_{code}:" if code and len(code) == 2 else ""
+            flag = _country_flag(p)
             desc = f"{flag} Games: {p.get('games', '?')} | {p.get('platformName', '')}".strip()
             options.append(discord.SelectOption(
                 label=label[:100],

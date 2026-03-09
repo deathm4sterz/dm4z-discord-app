@@ -23,6 +23,12 @@ DEFAULT_USER_AGENT = (
     "Chrome/91.0.4472.124 Safari/537.36"
 )
 
+PLATFORM_ICONS: dict[str, str] = {
+    "steam": "https://cdn3.emoji.gg/emojis/steam.png",
+    "playstation": "https://cdn3.emoji.gg/emojis/83525-playstationwhite.png",
+    "xbox": "https://cdn3.emoji.gg/emojis/41927-xbox.png",
+}
+
 LEETIFY_BASE_URL = "https://api-public.cs-prod.leetify.com"
 LEETIFY_PROFILE_PATH = "/v3/profile"
 LEETIFY_API_KEY_HEADER = "_leetify_key"
