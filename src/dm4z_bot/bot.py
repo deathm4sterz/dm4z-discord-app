@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 COMMAND_EXTENSIONS: tuple[str, ...] = (
     "dm4z_bot.commands.age",
+    "dm4z_bot.commands.help",
     "dm4z_bot.commands.match_info",
     "dm4z_bot.commands.rank",
     "dm4z_bot.commands.leaderboard",

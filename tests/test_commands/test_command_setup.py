@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dm4z_bot.commands import age, approve, guild_config, leaderboard, link, match_info, profile, rank, stats
+from dm4z_bot.commands import age, approve, guild_config, help, leaderboard, link, match_info, profile, rank, stats
 from dm4z_bot.database.db import Database
 from dm4z_bot.services.aoe2_api import Aoe2Api
 from dm4z_bot.services.games.aoe2_service import Aoe2Service
@@ -24,6 +24,7 @@ class FakeBot:
 def test_setup_registers_all_command_cogs() -> None:
     bot = FakeBot()
     age.setup(bot)  # type: ignore[arg-type]
+    help.setup(bot)  # type: ignore[arg-type]
     match_info.setup(bot)  # type: ignore[arg-type]
     rank.setup(bot)  # type: ignore[arg-type]
     leaderboard.setup(bot)  # type: ignore[arg-type]
@@ -34,6 +35,7 @@ def test_setup_registers_all_command_cogs() -> None:
     guild_config.setup(bot)  # type: ignore[arg-type]
     assert bot.cogs == [
         "AgeCommands",
+        "HelpCommands",
         "MatchInfoCommands",
         "RankCommands",
         "LeaderboardCommands",

@@ -11,7 +11,7 @@ from discord import option
 
 from dm4z_bot.database.db import Database
 from dm4z_bot.services.aoe2_api import Aoe2Api
-from dm4z_bot.utils.constants import PLATFORM_ICONS
+from dm4z_bot.utils.constants import PLATFORM_ICONS, PROFILE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -72,12 +72,12 @@ def build_profile_embeds(
     if flag:
         author_text = f"{author_text} {flag}"
 
-    embed = discord.Embed()
+    embed = discord.Embed(description=f"[View on AoE2 Companion]({PROFILE_URL.format(profile_id=profile_id)})")
     if avatar:
-        embed.set_author(name=author_text, icon_url=avatar)
+        embed.set_author(name=author_text, icon_url=avatar, url=PROFILE_URL.format(profile_id=profile_id))
         embed.set_thumbnail(url=avatar)
     else:
-        embed.set_author(name=author_text)
+        embed.set_author(name=author_text, url=PROFILE_URL.format(profile_id=profile_id))
 
     for lb in profile.get("leaderboards", []):
         if lb.get("games", 0) == 0:

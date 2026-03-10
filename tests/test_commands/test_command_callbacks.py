@@ -9,6 +9,7 @@ import discord
 import pytest
 
 from dm4z_bot.commands.age import AgeCommands
+from dm4z_bot.commands.help import HelpCommands
 from dm4z_bot.commands.leaderboard import LeaderboardCommands
 from dm4z_bot.commands.match_info import MatchInfoCommands
 from dm4z_bot.commands.rank import (
@@ -95,6 +96,11 @@ class FakeApi:
         return "leaderboard"
 
 
+class FakeRegistry:
+    def keys(self) -> list[str]:
+        return ["cs2", "aoe2"]
+
+
 class FakeDb:
     def __init__(self, row: dict[str, Any] | None = None) -> None:
         self._row = row
@@ -126,6 +132,17 @@ async def test_age_uses_selected_user_when_provided() -> None:
 
 
 # -- MatchInfo tests (unchanged) --
+
+
+@pytest.mark.asyncio
+async def test_help_returns_command_reference() -> None:
+    ctx = FakeContext()
+    cog = HelpCommands(bot=SimpleNamespace(), registry=FakeRegistry())
+    await HelpCommands.help.callback(cog, ctx)
+    assert "**DM4Z Bot Help**" in ctx.responses[0]["content"]
+    assert "/link <game> <account_id>" in ctx.responses[0]["content"]
+    assert "`aoe2`" in ctx.responses[0]["content"]
+    assert "`cs2`" in ctx.responses[0]["content"]
 
 
 @pytest.mark.asyncio

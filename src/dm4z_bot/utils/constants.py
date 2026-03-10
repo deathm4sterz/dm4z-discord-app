@@ -12,6 +12,7 @@ PLAYER_IDS: tuple[str, ...] = (
 )
 
 PROFILE_API_URL = "https://data.aoe2companion.com/api/profiles"
+PROFILE_URL = "https://www.aoe2companion.com/players/{profile_id}"
 LEADERBOARD_URL_TEMPLATE = (
     "https://www.aoe2insights.com/nightbot/leaderboard/3/"
     "?user_ids={user_ids}&rank=global&limit=5"
