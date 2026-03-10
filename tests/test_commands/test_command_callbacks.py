@@ -23,7 +23,7 @@ SAMPLE_PROFILE: dict[str, Any] = {
     "name": "hjpotter92",
     "clan": "dm4z",
     "profileId": 1228227,
-    "country": "de",
+    "country": "in",
     "countryIcon": "\U0001f1e9\U0001f1ea",
     "platformName": "Steam",
     "avatarMediumUrl": "https://example.com/avatar.jpg",
@@ -69,7 +69,7 @@ class FakeContext:
         self.responses: list[dict[str, Any]] = []
         self.followup = self
 
-    async def respond(self, content: str, view: object | None = None) -> None:
+    async def respond(self, content: str, view: object | None = None, **kwargs: object) -> None:
         self.responses.append({"content": content, "view": view})
 
     async def defer(self) -> None:
