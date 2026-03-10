@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
@@ -237,6 +238,42 @@ async def test_rank_no_linked_account() -> None:
     assert "\u274c No linked AoE2 account found" in resp["content"]
 
 
+# -- Rank command: Case 4 (cached stats from DB) --
+
+
+class NoCallApi(FakeApi):
+    async def fetch_profile(self, profile_id: str) -> dict[str, Any]:
+        raise AssertionError("API should not be called when cached stats exist")
+
+
+@pytest.mark.asyncio
+async def test_rank_profile_id_uses_cached_stats() -> None:
+    cached_row = {"stats_json": json.dumps(SAMPLE_PROFILE), "updated_at": "2025-06-01 12:00:00"}
+    ctx = FakeContext()
+    cog = RankCommands(bot=SimpleNamespace(), api=NoCallApi(), db=FakeDb(row=cached_row))
+    await RankCommands.rank.callback(cog, ctx, player_name=None, profile_id=1228227)
+    resp = ctx.responses[0]
+    assert resp["embeds"] is not None
+    assert len(resp["embeds"]) == 1
+    assert resp["embeds"][0].timestamp == datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+
+
+@pytest.mark.asyncio
+async def test_rank_linked_account_uses_cached_stats() -> None:
+    cached_row = {
+        "account_identifier": "1228227",
+        "stats_json": json.dumps(SAMPLE_PROFILE),
+        "updated_at": "2025-06-01 12:00:00",
+    }
+    ctx = FakeContext()
+    cog = RankCommands(bot=SimpleNamespace(), api=NoCallApi(), db=FakeDb(row=cached_row))
+    await RankCommands.rank.callback(cog, ctx, player_name=None, profile_id=None)
+    resp = ctx.responses[0]
+    assert resp["embeds"] is not None
+    assert len(resp["embeds"]) == 1
+    assert resp["embeds"][0].timestamp == datetime(2025, 6, 1, 12, 0, tzinfo=UTC)
+
+
 # -- Rank command: Case 5 (general errors) --
 
 
@@ -328,6 +365,17 @@ def test_build_profile_embeds_no_avatar() -> None:
     embeds = build_profile_embeds(profile)
     assert embeds[0].thumbnail is None
     assert embeds[0].author.icon_url is None
+
+
+def test_build_profile_embeds_timestamp_default() -> None:
+    embeds = build_profile_embeds(SAMPLE_PROFILE)
+    assert embeds[0].timestamp is not None
+
+
+def test_build_profile_embeds_timestamp_custom() -> None:
+    ts = datetime(2025, 1, 1, tzinfo=UTC)
+    embeds = build_profile_embeds(SAMPLE_PROFILE, timestamp=ts)
+    assert embeds[0].timestamp == ts
 
 
 # -- ProfileSelectView._on_select tests --

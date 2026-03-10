@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import logging
+from datetime import UTC, datetime
 from typing import Any, cast
 
 import discord
@@ -21,7 +23,9 @@ def _country_flag(profile: dict[str, Any]) -> str:
     return ""
 
 
-def build_profile_embeds(profile: dict[str, Any]) -> list[discord.Embed]:
+def build_profile_embeds(
+    profile: dict[str, Any], *, timestamp: datetime | None = None
+) -> list[discord.Embed]:
     name = profile.get("name", "Unknown")
     clan = profile.get("clan")
     flag = _country_flag(profile)
@@ -64,6 +68,7 @@ def build_profile_embeds(profile: dict[str, Any]) -> list[discord.Embed]:
         text=f"Platform: {platform} | Profile ID: {profile_id}",
         icon_url=footer_icon,
     )
+    embed.timestamp = timestamp or datetime.now(UTC)
     return [embed]
 
 
@@ -131,6 +136,21 @@ class RankCommands(discord.Cog):
             await ctx.followup.send("\u274c Failed to fetch rank details. Try again later...")
 
     async def _handle_profile_id(self, ctx: discord.ApplicationContext, profile_id: int) -> None:
+        row = await self.db.fetch_one(
+            "SELECT gs.stats_json, gs.updated_at "
+            "FROM game_accounts ga "
+            "JOIN game_stats gs ON gs.game_account_id = ga.id "
+            "WHERE ga.account_identifier = ? AND ga.game = 'aoe2' AND ga.status = 'approved' "
+            "ORDER BY gs.updated_at DESC LIMIT 1",
+            (str(profile_id),),
+        )
+        if row and row.get("stats_json"):
+            profile = json.loads(row["stats_json"])
+            updated_at = datetime.fromisoformat(row["updated_at"]).replace(tzinfo=UTC)
+            embeds = build_profile_embeds(profile, timestamp=updated_at)
+            await ctx.followup.send(embeds=embeds)
+            return
+
         try:
             profile = await self.api.fetch_profile(str(profile_id))
         except Exception:
@@ -156,8 +176,12 @@ class RankCommands(discord.Cog):
         guild_id = ctx.guild_id
         member_id = ctx.author.id
         row = await self.db.fetch_one(
-            "SELECT account_identifier FROM game_accounts "
-            "WHERE member_id = ? AND guild_id = ? AND game = 'aoe2' AND status = 'approved'",
+            "SELECT ga.account_identifier, gs.stats_json, gs.updated_at "
+            "FROM game_accounts ga "
+            "LEFT JOIN game_stats gs ON gs.game_account_id = ga.id "
+            "WHERE ga.member_id = ? AND ga.guild_id = ? AND ga.game = 'aoe2' "
+            "AND ga.status = 'approved' "
+            "ORDER BY gs.updated_at DESC LIMIT 1",
             (member_id, guild_id),
         )
         if not row:
@@ -167,8 +191,14 @@ class RankCommands(discord.Cog):
                 "or provide a `player_name` or `profile_id`."
             )
             return
-        profile = await self.api.fetch_profile(row["account_identifier"])
-        embeds = build_profile_embeds(profile)
+
+        if row.get("stats_json"):
+            profile = json.loads(row["stats_json"])
+            updated_at = datetime.fromisoformat(row["updated_at"]).replace(tzinfo=UTC)
+            embeds = build_profile_embeds(profile, timestamp=updated_at)
+        else:
+            profile = await self.api.fetch_profile(row["account_identifier"])
+            embeds = build_profile_embeds(profile)
         await ctx.followup.send(embeds=embeds)
 
 
