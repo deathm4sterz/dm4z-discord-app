@@ -11,6 +11,38 @@ from dm4z_bot.database.db import Database
 logger = logging.getLogger(__name__)
 
 
+async def _notify_game_channel(
+    bot: discord.Bot,
+    db: Database,
+    guild_id: int,
+    member_id: int,
+    game: str,
+    account: str,
+    status: str,
+) -> None:
+    row = await db.fetch_one(
+        "SELECT channel_id FROM guild_games WHERE guild_id = ? AND game = ? AND enabled = 1",
+        (guild_id, game),
+    )
+    if not row or not row["channel_id"]:
+        return
+
+    channel = bot.get_channel(row["channel_id"])
+    if channel is None:
+        logger.warning("Game channel %d not found for guild %d / %s", row["channel_id"], guild_id, game)
+        return
+
+    if status == "approved":
+        msg = f"✅ <@{member_id}>'s **{game}** account (`{account}`) has been approved!"
+    else:
+        msg = f"❌ <@{member_id}>'s **{game}** account (`{account}`) link request was denied."
+
+    try:
+        await channel.send(msg)
+    except Exception:
+        logger.exception("Failed to send game-channel notification for guild %d / %s", guild_id, game)
+
+
 class ApprovalView(discord.ui.View):
     def __init__(self, db: Database, request_id: int, member_id: int, game: str, account: str) -> None:
         super().__init__(timeout=None)
@@ -47,6 +79,10 @@ class ApprovalView(discord.ui.View):
             f" — <@{self.member_id}>'s **{self.game}** (`{self.account}`)"
         )
         await interaction.response.edit_message(content=msg, view=self)
+        await _notify_game_channel(
+            interaction.client, self.db, interaction.guild_id,
+            self.member_id, self.game, self.account, "approved",
+        )
 
     @discord.ui.button(label="Deny", style=discord.ButtonStyle.red, custom_id="approval_deny")
     async def deny_button(self, button: discord.ui.Button, interaction: discord.Interaction) -> None:
@@ -75,6 +111,10 @@ class ApprovalView(discord.ui.View):
             f" — <@{self.member_id}>'s **{self.game}** (`{self.account}`)"
         )
         await interaction.response.edit_message(content=msg, view=self)
+        await _notify_game_channel(
+            interaction.client, self.db, interaction.guild_id,
+            self.member_id, self.game, self.account, "rejected",
+        )
 
 
 async def send_mod_notification(
@@ -134,6 +174,10 @@ class ApproveCommands(discord.Cog):
             "It will now be tracked.",
             ephemeral=True,
         )
+        await _notify_game_channel(
+            self.bot, self.db, guild_id,
+            member.id, game, row["account_identifier"], "approved",
+        )
 
     @discord.slash_command(description="Reject a member's game account link request")
     @option("member", discord.Member, description="The member to reject")
@@ -143,7 +187,8 @@ class ApproveCommands(discord.Cog):
         logger.debug("/reject invoked by %s for member %s (%s)", ctx.author, member, game)
         guild_id = ctx.guild_id
         row = await self.db.fetch_one(
-            "SELECT id, status FROM game_accounts WHERE member_id = ? AND guild_id = ? AND game = ?",
+            "SELECT id, status, account_identifier FROM game_accounts "
+            "WHERE member_id = ? AND guild_id = ? AND game = ?",
             (member.id, guild_id, game),
         )
         if not row:
@@ -157,6 +202,10 @@ class ApproveCommands(discord.Cog):
         )
         logger.info("Rejected link request %d for member %s (%s) by %s", row["id"], member, game, ctx.author)
         await ctx.respond(f"✅ Rejected {member.mention}'s **{game}** link request.", ephemeral=True)
+        await _notify_game_channel(
+            self.bot, self.db, guild_id,
+            member.id, game, row["account_identifier"], "rejected",
+        )
 
     @discord.slash_command(description="List pending link requests in this server")
     @option("game", str, description="Filter by game key", required=False)

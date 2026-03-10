@@ -4,7 +4,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from dm4z_bot.commands.approve import ApprovalView, ApproveCommands, send_mod_notification
+from dm4z_bot.commands.approve import (
+    ApprovalView,
+    ApproveCommands,
+    _notify_game_channel,
+    send_mod_notification,
+)
 from dm4z_bot.commands.guild_config import GuildConfigCommands
 from dm4z_bot.commands.link import LinkCommands
 from dm4z_bot.commands.profile import ProfileCommands
@@ -31,10 +36,15 @@ class FakeContext:
 
 
 class FakeInteraction:
-    def __init__(self, *, manage_roles: bool = True, user_id: int = 300) -> None:
+    def __init__(
+        self, *, manage_roles: bool = True, user_id: int = 300,
+        guild_id: int = 1, client: object | None = None,
+    ) -> None:
         perms = SimpleNamespace(manage_roles=manage_roles)
         self.user = SimpleNamespace(id=user_id, mention=f"<@{user_id}>", guild_permissions=perms)
         self.response = self
+        self.guild_id = guild_id
+        self.client = client or SimpleNamespace(get_channel=lambda _: None)
         self.sent: list[tuple[str, dict]] = []
         self.edited: list[tuple[str, object | None]] = []
 
@@ -375,6 +385,172 @@ async def test_send_mod_notification_success(memory_db: Database) -> None:
     await send_mod_notification(bot, memory_db, 1, 200, "testgame", "acc1", 42)
     assert len(channel.messages) == 1
     assert "New link request" in channel.messages[0][0]
+
+
+# --- _notify_game_channel tests ---
+
+
+@pytest.mark.asyncio
+async def test_notify_game_channel_no_game_row(memory_db: Database) -> None:
+    bot = SimpleNamespace(get_channel=lambda _: None)
+    await _notify_game_channel(bot, memory_db, 1, 200, "testgame", "acc1", "approved")
+
+
+@pytest.mark.asyncio
+async def test_notify_game_channel_no_channel_id(memory_db: Database) -> None:
+    await memory_db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (1,))
+    await memory_db.execute(
+        "INSERT INTO guild_games (guild_id, game, channel_id) VALUES (?, ?, NULL)", (1, "testgame"),
+    )
+    bot = SimpleNamespace(get_channel=lambda _: None)
+    await _notify_game_channel(bot, memory_db, 1, 200, "testgame", "acc1", "approved")
+
+
+@pytest.mark.asyncio
+async def test_notify_game_channel_disabled(memory_db: Database) -> None:
+    await memory_db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (1,))
+    await memory_db.execute(
+        "INSERT INTO guild_games (guild_id, game, channel_id, enabled) VALUES (?, ?, ?, 0)",
+        (1, "testgame", 555),
+    )
+    bot = SimpleNamespace(get_channel=lambda _: None)
+    await _notify_game_channel(bot, memory_db, 1, 200, "testgame", "acc1", "approved")
+
+
+@pytest.mark.asyncio
+async def test_notify_game_channel_channel_not_found(memory_db: Database) -> None:
+    await memory_db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (1,))
+    await memory_db.execute(
+        "INSERT INTO guild_games (guild_id, game, channel_id, enabled) VALUES (?, ?, ?, 1)",
+        (1, "testgame", 555),
+    )
+    bot = SimpleNamespace(get_channel=lambda _: None)
+    await _notify_game_channel(bot, memory_db, 1, 200, "testgame", "acc1", "approved")
+
+
+@pytest.mark.asyncio
+async def test_notify_game_channel_approved(memory_db: Database) -> None:
+    await memory_db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (1,))
+    await memory_db.execute(
+        "INSERT INTO guild_games (guild_id, game, channel_id, enabled) VALUES (?, ?, ?, 1)",
+        (1, "testgame", 555),
+    )
+    channel = FakeChannel()
+    bot = SimpleNamespace(get_channel=lambda cid: channel if cid == 555 else None)
+    await _notify_game_channel(bot, memory_db, 1, 200, "testgame", "acc1", "approved")
+    assert len(channel.messages) == 1
+    assert "approved" in channel.messages[0][0]
+    assert "<@200>" in channel.messages[0][0]
+
+
+@pytest.mark.asyncio
+async def test_notify_game_channel_rejected(memory_db: Database) -> None:
+    await memory_db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (1,))
+    await memory_db.execute(
+        "INSERT INTO guild_games (guild_id, game, channel_id, enabled) VALUES (?, ?, ?, 1)",
+        (1, "testgame", 555),
+    )
+    channel = FakeChannel()
+    bot = SimpleNamespace(get_channel=lambda cid: channel if cid == 555 else None)
+    await _notify_game_channel(bot, memory_db, 1, 200, "testgame", "acc1", "rejected")
+    assert len(channel.messages) == 1
+    assert "denied" in channel.messages[0][0].lower()
+    assert "<@200>" in channel.messages[0][0]
+
+
+@pytest.mark.asyncio
+async def test_notify_game_channel_send_failure(memory_db: Database) -> None:
+    await memory_db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (1,))
+    await memory_db.execute(
+        "INSERT INTO guild_games (guild_id, game, channel_id, enabled) VALUES (?, ?, ?, 1)",
+        (1, "testgame", 555),
+    )
+
+    class BrokenChannel:
+        async def send(self, content: str, **kwargs: object) -> None:
+            raise RuntimeError("boom")
+
+    bot = SimpleNamespace(get_channel=lambda cid: BrokenChannel() if cid == 555 else None)
+    await _notify_game_channel(bot, memory_db, 1, 200, "testgame", "acc1", "approved")
+
+
+# --- Button game-channel notification integration tests ---
+
+
+async def _setup_game_channel(db: Database, guild_id: int = 1, game: str = "testgame") -> FakeChannel:
+    await db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (guild_id,))
+    await db.execute(
+        "INSERT OR REPLACE INTO guild_games (guild_id, game, channel_id, enabled) VALUES (?, ?, ?, 1)",
+        (guild_id, game, 555),
+    )
+    return FakeChannel()
+
+
+@pytest.mark.asyncio
+async def test_approve_button_notifies_game_channel(memory_db: Database) -> None:
+    await _insert_pending_account(memory_db, 200, 1, "testgame", "acc1")
+    channel = await _setup_game_channel(memory_db)
+    row = await memory_db.fetch_one("SELECT id FROM game_accounts WHERE member_id = 200")
+
+    bot = SimpleNamespace(get_channel=lambda cid: channel if cid == 555 else None)
+    view = ApprovalView(memory_db, row["id"], 200, "testgame", "acc1")
+    interaction = FakeInteraction(manage_roles=True, client=bot)
+    await view.approve_button.callback(interaction)
+
+    assert len(channel.messages) == 1
+    assert "approved" in channel.messages[0][0]
+    assert "<@200>" in channel.messages[0][0]
+
+
+@pytest.mark.asyncio
+async def test_deny_button_notifies_game_channel(memory_db: Database) -> None:
+    await _insert_pending_account(memory_db, 200, 1, "testgame", "acc1")
+    channel = await _setup_game_channel(memory_db)
+    row = await memory_db.fetch_one("SELECT id FROM game_accounts WHERE member_id = 200")
+
+    bot = SimpleNamespace(get_channel=lambda cid: channel if cid == 555 else None)
+    view = ApprovalView(memory_db, row["id"], 200, "testgame", "acc1")
+    interaction = FakeInteraction(manage_roles=True, client=bot)
+    await view.deny_button.callback(interaction)
+
+    assert len(channel.messages) == 1
+    assert "denied" in channel.messages[0][0].lower()
+    assert "<@200>" in channel.messages[0][0]
+
+
+# --- Slash command game-channel notification integration tests ---
+
+
+@pytest.mark.asyncio
+async def test_approve_command_notifies_game_channel(memory_db: Database) -> None:
+    await _insert_pending_account(memory_db, 200, 1, "testgame", "acc1")
+    channel = await _setup_game_channel(memory_db)
+
+    bot = SimpleNamespace(get_channel=lambda cid: channel if cid == 555 else None)
+    ctx = FakeContext(author_id=300)
+    member = SimpleNamespace(id=200, mention="<@200>")
+    cog = ApproveCommands(bot=bot, db=memory_db)
+    await ApproveCommands.approve.callback(cog, ctx, member, "testgame")
+
+    assert len(channel.messages) == 1
+    assert "approved" in channel.messages[0][0]
+    assert "<@200>" in channel.messages[0][0]
+
+
+@pytest.mark.asyncio
+async def test_reject_command_notifies_game_channel(memory_db: Database) -> None:
+    await _insert_pending_account(memory_db, 200, 1, "testgame", "acc1")
+    channel = await _setup_game_channel(memory_db)
+
+    bot = SimpleNamespace(get_channel=lambda cid: channel if cid == 555 else None)
+    ctx = FakeContext(author_id=300)
+    member = SimpleNamespace(id=200, mention="<@200>")
+    cog = ApproveCommands(bot=bot, db=memory_db)
+    await ApproveCommands.reject.callback(cog, ctx, member, "testgame")
+
+    assert len(channel.messages) == 1
+    assert "denied" in channel.messages[0][0].lower()
+    assert "<@200>" in channel.messages[0][0]
 
 
 # --- Profile command tests ---
