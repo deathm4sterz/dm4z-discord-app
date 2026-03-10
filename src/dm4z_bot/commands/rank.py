@@ -4,6 +4,7 @@ import json
 import logging
 from datetime import UTC, datetime
 from typing import Any, cast
+from urllib.parse import quote
 
 import discord
 from discord import option
@@ -13,6 +14,40 @@ from dm4z_bot.services.aoe2_api import Aoe2Api
 from dm4z_bot.utils.constants import PLATFORM_ICONS
 
 logger = logging.getLogger(__name__)
+
+_CHART_COLORS = [
+    "rgb(54,162,235)",
+    "rgb(255,99,132)",
+    "rgb(75,192,192)",
+    "rgb(255,206,86)",
+    "rgb(153,102,255)",
+    "rgb(255,159,64)",
+]
+
+
+def _build_chart_url(leaderboards: list[dict[str, Any]]) -> str:
+    active = [lb for lb in leaderboards if lb.get("games", 0) > 0]
+    if not active:
+        return ""
+    datasets = []
+    for i, lb in enumerate(active):
+        abbr = lb.get("abbreviation", lb.get("leaderboardId", "?"))
+        wins = lb.get("wins", 0)
+        losses = lb.get("losses", 0)
+        drops = lb.get("games", 0) - wins - losses
+        color = _CHART_COLORS[i % len(_CHART_COLORS)]
+        datasets.append(
+            f"{{label:'{abbr}',data:[{wins},{losses},{drops}],backgroundColor:'{color}'}}"
+        )
+    ds = ",".join(datasets)
+    config = (
+        f"{{type:'bar',data:{{labels:['Wins','Losses','Drops'],datasets:[{ds}]}},"
+        f"options:{{scales:{{xAxes:[{{stacked:true,ticks:{{fontColor:'#fff'}}}}],"
+        f"yAxes:[{{stacked:true,ticks:{{fontColor:'#fff'}}}}]}},"
+        f"legend:{{labels:{{fontColor:'#fff'}}}}}}}}"
+    )
+    return f"https://quickchart.io/chart?c={quote(config)}&w=500&h=200&bkg=%232b2d31"
+
 
 def _country_flag(profile: dict[str, Any]) -> str:
     if icon := profile.get("countryIcon"):
@@ -62,6 +97,10 @@ def build_profile_embeds(
             f"Streak: {lb.get('streak', 0)}"
         )
         embed.add_field(name=f"{status} {abbr}", value=value, inline=True)
+
+    chart_url = _build_chart_url(profile.get("leaderboards", []))
+    if chart_url:
+        embed.set_image(url=chart_url)
 
     footer_icon = PLATFORM_ICONS.get(platform.lower())
     embed.set_footer(

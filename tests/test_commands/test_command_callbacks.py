@@ -11,7 +11,12 @@ import pytest
 from dm4z_bot.commands.age import AgeCommands
 from dm4z_bot.commands.leaderboard import LeaderboardCommands
 from dm4z_bot.commands.match_info import MatchInfoCommands
-from dm4z_bot.commands.rank import ProfileSelectView, RankCommands, build_profile_embeds
+from dm4z_bot.commands.rank import (
+    ProfileSelectView,
+    RankCommands,
+    _build_chart_url,
+    build_profile_embeds,
+)
 
 SAMPLE_PROFILE: dict[str, Any] = {
     "name": "hjpotter92",
@@ -376,6 +381,40 @@ def test_build_profile_embeds_timestamp_custom() -> None:
     ts = datetime(2025, 1, 1, tzinfo=UTC)
     embeds = build_profile_embeds(SAMPLE_PROFILE, timestamp=ts)
     assert embeds[0].timestamp == ts
+
+
+def test_build_profile_embeds_has_chart_image() -> None:
+    embeds = build_profile_embeds(SAMPLE_PROFILE)
+    assert embeds[0].image is not None
+    assert "quickchart.io/chart" in embeds[0].image.url
+
+
+def test_build_profile_embeds_no_chart_when_no_leaderboards() -> None:
+    profile = {**SAMPLE_PROFILE, "leaderboards": []}
+    embeds = build_profile_embeds(profile)
+    assert embeds[0].image is None
+
+
+def test_build_chart_url_empty_for_zero_games() -> None:
+    leaderboards = [{"abbreviation": "EW", "games": 0, "wins": 0, "losses": 0}]
+    assert _build_chart_url(leaderboards) == ""
+
+
+def test_build_chart_url_contains_labels_and_data() -> None:
+    url = _build_chart_url(SAMPLE_PROFILE["leaderboards"])
+    assert "quickchart.io/chart" in url
+    assert "Wins" in url
+    assert "Losses" in url
+    assert "Drops" in url
+    assert "RM%20Team" in url or "RM+Team" in url
+
+
+def test_build_chart_url_calculates_drops() -> None:
+    leaderboards = [{"abbreviation": "Test", "games": 100, "wins": 60, "losses": 30}]
+    url = _build_chart_url(leaderboards)
+    assert "60" in url
+    assert "30" in url
+    assert "10" in url
 
 
 # -- ProfileSelectView._on_select tests --
