@@ -9,7 +9,7 @@ from dm4z_bot.utils.match_embeds import (
     COLOR_WIN,
     _build_team_fields,
     _format_duration,
-    _iso_to_unix,
+    _iso_to_datetime,
     _player_line,
     build_active_match_embed,
     build_active_match_view,
@@ -62,15 +62,17 @@ SAMPLE_MATCH_DATA = {
     "mapImageUrl": "https://example.com/megarandom.png",
     "server": "centralindia",
     "averageRating": 1255,
+    "mapSize": "Large",
     "population": 200,
     "players": SAMPLE_PLAYERS,
 }
 
 
-def test_iso_to_unix() -> None:
-    ts = _iso_to_unix("2026-03-12T08:19:43.000Z")
-    assert isinstance(ts, int)
-    assert ts > 0
+def test_iso_to_datetime() -> None:
+    dt = _iso_to_datetime("2026-03-12T08:19:43.000Z")
+    assert dt.year == 2026
+    assert dt.month == 3
+    assert dt.day == 12
 
 
 def test_format_duration() -> None:
@@ -166,12 +168,14 @@ def test_build_active_match_embed() -> None:
         member_map={"1228227": 100},
         app_emojis={},
     )
-    assert "Match in Progress" in embed.title
-    assert "MegaRandom" in embed.title
+    assert embed.title == "Team Random Map on MegaRandom"
+    assert "Map: MegaRandom" in embed.description
+    assert "Map Size: Large" in embed.description
     assert embed.color.value == COLOR_ACTIVE
     assert len(embed.fields) == 2
     assert embed.thumbnail.url == "https://example.com/megarandom.png"
-    assert "centralindia" in embed.footer.text
+    assert embed.footer.text == "Server: centralindia"
+    assert embed.timestamp is not None
 
 
 def test_build_active_match_embed_no_map_image() -> None:
@@ -205,9 +209,13 @@ def test_build_finished_match_embed_with_result() -> None:
         member_map={"1228227": 100},
         app_emojis={},
     )
-    assert "Match Ended" in embed.title
+    assert embed.title == "Team Random Map on MegaRandom"
     assert embed.color.value == COLOR_WIN
+    assert "Map: MegaRandom" in embed.description
+    assert "Map Size: Large" in embed.description
     assert "Duration:" in embed.description
+    assert embed.footer.text == "Server: centralindia"
+    assert embed.timestamp is not None
     assert "🏆" in embed.fields[0].name
     assert "💀" in embed.fields[1].name
 
@@ -239,7 +247,7 @@ def test_build_finished_match_embed_no_result() -> None:
         app_emojis={},
     )
     assert embed.color.value == COLOR_UNKNOWN
-    assert "Match Ended" in embed.title
+    assert embed.title == "Team Random Map on MegaRandom"
 
 
 def test_build_finished_match_embed_result_no_finished() -> None:
@@ -256,7 +264,8 @@ def test_build_finished_match_embed_result_no_finished() -> None:
         member_map={"1228227": 100},
         app_emojis={},
     )
-    assert "Ended" in embed.footer.text
+    assert "Duration" not in embed.description
+    assert "Server:" in embed.footer.text
 
 
 def test_build_finished_match_embed_no_tracked_teams() -> None:
@@ -280,7 +289,7 @@ def test_build_active_match_embed_no_started() -> None:
     data = {**SAMPLE_MATCH_DATA, "started": ""}
     embed = build_active_match_embed(data, set(), {}, {})
     assert "Server:" in embed.footer.text
-    assert "<t:" not in embed.footer.text
+    assert embed.timestamp is None
 
 
 def test_build_finished_match_embed_no_map_image() -> None:
@@ -292,7 +301,8 @@ def test_build_finished_match_embed_no_map_image() -> None:
 def test_build_finished_match_embed_no_started() -> None:
     data = {**SAMPLE_MATCH_DATA, "started": ""}
     embed = build_finished_match_embed(data, None, set(), {}, {})
-    assert "Started" not in (embed.footer.text if embed.footer else "")
+    assert embed.timestamp is None
+    assert "Server:" in embed.footer.text
 
 
 def test_build_finished_match_embed_won_is_none() -> None:
@@ -321,6 +331,7 @@ def test_build_finished_match_embed_empty_footer() -> None:
     }
     embed = build_finished_match_embed(data, result_data, set(), {}, {})
     assert embed.footer is not None
+    assert "Server:" in embed.footer.text
 
 
 @pytest.mark.asyncio

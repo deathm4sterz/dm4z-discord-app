@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 import discord
@@ -21,9 +21,8 @@ COLOR_LOSS = 0xE74C3C
 COLOR_UNKNOWN = 0x95A5A6
 
 
-def _iso_to_unix(iso_str: str) -> int:
-    dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
-    return int(dt.timestamp())
+def _iso_to_datetime(iso_str: str) -> datetime:
+    return datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
 
 
 def _format_duration(started: str, finished: str) -> str:
@@ -108,21 +107,25 @@ def build_active_match_embed(
     app_emojis: dict[str, discord.Emoji],
 ) -> discord.Embed:
     map_name = match_data.get("mapName", "Unknown Map")
-    leaderboard = match_data.get("leaderboardName", "")
-    game_mode = match_data.get("gameModeName", "")
-    avg_rating = match_data.get("averageRating", "?")
+    leaderboard = match_data.get("leaderboardName", "Unknown")
+    map_size = match_data.get("mapSize", "")
     server = match_data.get("server", "unknown")
     started = match_data.get("started", "")
     map_image = match_data.get("mapImageUrl")
     players = match_data.get("players", [])
 
-    desc_parts = [p for p in [leaderboard, game_mode, f"Avg Rating: {avg_rating}"] if p]
+    desc_lines = [f"Map: {map_name}"]
+    if map_size:
+        desc_lines.append(f"Map Size: {map_size}")
 
     embed = discord.Embed(
-        title=f"Match in Progress \u2014 {map_name}",
-        description=" | ".join(desc_parts),
+        title=f"{leaderboard} on {map_name}",
+        description="\n".join(desc_lines),
         color=COLOR_ACTIVE,
     )
+
+    if started:
+        embed.timestamp = _iso_to_datetime(started)
 
     if map_image:
         embed.set_thumbnail(url=map_image)
@@ -130,11 +133,7 @@ def build_active_match_embed(
     for field in _build_team_fields(players, tracked_profile_ids, member_map, app_emojis):
         embed.add_field(name=field.name, value=field.value, inline=field.inline)
 
-    footer_parts = [f"Server: {server}"]
-    if started:
-        unix_ts = _iso_to_unix(started)
-        footer_parts.append(f"Started <t:{unix_ts}:R>")
-    embed.set_footer(text=" | ".join(footer_parts))
+    embed.set_footer(text=f"Server: {server}")
 
     return embed
 
@@ -167,8 +166,9 @@ def build_finished_match_embed(
     app_emojis: dict[str, discord.Emoji],
 ) -> discord.Embed:
     map_name = match_data.get("mapName", "Unknown Map")
-    leaderboard = match_data.get("leaderboardName", "")
-    avg_rating = match_data.get("averageRating", "?")
+    leaderboard = match_data.get("leaderboardName", "Unknown")
+    map_size = match_data.get("mapSize", "")
+    server = match_data.get("server", "unknown")
     started = match_data.get("started", "")
     players = match_data.get("players", [])
 
@@ -201,16 +201,20 @@ def build_finished_match_embed(
         if finished and started:
             duration_str = _format_duration(started, finished)
 
-    desc_parts = [p for p in [leaderboard] if p]
+    desc_lines = [f"Map: {map_name}"]
+    if map_size:
+        desc_lines.append(f"Map Size: {map_size}")
     if duration_str:
-        desc_parts.append(f"Duration: {duration_str}")
-    desc_parts.append(f"Avg Rating: {avg_rating}")
+        desc_lines.append(f"Duration: {duration_str}")
 
     embed = discord.Embed(
-        title=f"Match Ended \u2014 {map_name}",
-        description=" | ".join(desc_parts),
+        title=f"{leaderboard} on {map_name}",
+        description="\n".join(desc_lines),
         color=color,
     )
+
+    if started:
+        embed.timestamp = _iso_to_datetime(started)
 
     map_image = match_data.get("mapImageUrl")
     if map_image:
@@ -219,15 +223,7 @@ def build_finished_match_embed(
     for field in _build_team_fields(players, tracked_profile_ids, member_map, app_emojis, team_results):
         embed.add_field(name=field.name, value=field.value, inline=field.inline)
 
-    footer_parts = []
-    if started:
-        footer_parts.append(f"Started <t:{_iso_to_unix(started)}:R>")
-    if finished:
-        footer_parts.append(f"Ended <t:{_iso_to_unix(finished)}:R>")
-    else:
-        now_ts = int(datetime.now(UTC).timestamp())
-        footer_parts.append(f"Ended <t:{now_ts}:R>")
-    embed.set_footer(text=" | ".join(footer_parts))
+    embed.set_footer(text=f"Server: {server}")
 
     return embed
 
