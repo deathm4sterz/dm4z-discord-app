@@ -65,7 +65,27 @@ MIGRATION_002 = """\
 ALTER TABLE guilds ADD COLUMN mod_channel_id INTEGER;
 """
 
+MIGRATION_003 = """\
+ALTER TABLE game_accounts ADD COLUMN tracking INTEGER DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS tracked_matches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_id TEXT NOT NULL,
+    guild_id INTEGER NOT NULL,
+    channel_id INTEGER NOT NULL,
+    message_id INTEGER,
+    account_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    match_data TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (guild_id) REFERENCES guilds(guild_id),
+    FOREIGN KEY (account_id) REFERENCES game_accounts(id)
+);
+"""
+
 MIGRATIONS: list[tuple[int, str]] = [
     (1, MIGRATION_001),
     (2, MIGRATION_002),
+    (3, MIGRATION_003),
 ]

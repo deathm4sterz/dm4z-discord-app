@@ -106,7 +106,7 @@ digraph architecture {
 
 ### Guild configuration
 
-- `/guild_config enable_game <game> <channel>` -- enable a game for the server
+- `/guild_config register_game <game> <channel>` -- register a game for the server
 - `/guild_config disable_game <game>` -- disable a game
 
 ### Background jobs

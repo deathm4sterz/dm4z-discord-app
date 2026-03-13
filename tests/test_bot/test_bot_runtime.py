@@ -40,6 +40,8 @@ async def test_setup_hook_loads_all_extensions(
 
     monkeypatch.setattr(bot, "sync_commands", successful_sync)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
+    monkeypatch.setattr(bot.match_tracker, "start", lambda: None)
+    monkeypatch.setattr(type(bot), "fetch_emojis", _async_empty_list)
     with caplog.at_level(logging.INFO):
         await bot.setup_hook()
     assert loaded == [*COMMAND_EXTENSIONS, *EVENT_EXTENSIONS]
@@ -48,11 +50,12 @@ async def test_setup_hook_loads_all_extensions(
 
 @pytest.mark.asyncio
 async def test_on_ready_logs_when_user_available(
-    caplog: pytest.LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bot = _make_bot()
     bot._connection.user = SimpleNamespace(name="dm4z")
     bot._setup_complete = True
+    monkeypatch.setattr(bot.db, "fetch_all", _async_empty_list)
     with caplog.at_level(logging.INFO):
         await bot.on_ready()
     assert "Logged in as dm4z" in caplog.text
@@ -79,6 +82,8 @@ async def test_setup_hook_logs_sync_error(
     monkeypatch.setattr(bot, "load_extension", lambda x: None)
     monkeypatch.setattr(bot.db, "connect", _async_noop)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
+    monkeypatch.setattr(bot.match_tracker, "start", lambda: None)
+    monkeypatch.setattr(type(bot), "fetch_emojis", _async_empty_list)
 
     async def failing_sync():
         raise Exception("Sync failed")
@@ -97,6 +102,8 @@ async def test_setup_hook_handles_none_sync_result(
     monkeypatch.setattr(bot, "load_extension", lambda x: None)
     monkeypatch.setattr(bot.db, "connect", _async_noop)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
+    monkeypatch.setattr(bot.match_tracker, "start", lambda: None)
+    monkeypatch.setattr(type(bot), "fetch_emojis", _async_empty_list)
 
     async def none_sync():
         return None
@@ -119,6 +126,8 @@ async def test_setup_hook_logs_extension_loading(
     monkeypatch.setattr(bot, "load_extension", lambda x: None)
     monkeypatch.setattr(bot.db, "connect", _async_noop)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
+    monkeypatch.setattr(bot.match_tracker, "start", lambda: None)
+    monkeypatch.setattr(type(bot), "fetch_emojis", _async_empty_list)
     monkeypatch.setattr(bot, "sync_commands", lambda: [])
     monkeypatch.setattr(
         type(bot), "pending_application_commands", property(lambda self: [])
@@ -149,7 +158,10 @@ async def test_on_ready_calls_setup_if_not_complete(
     bot._connection.user = SimpleNamespace(name="dm4z")
     monkeypatch.setattr(bot, "load_extension", lambda x: None)
     monkeypatch.setattr(bot.db, "connect", _async_noop)
+    monkeypatch.setattr(bot.db, "fetch_all", _async_empty_list)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
+    monkeypatch.setattr(bot.match_tracker, "start", lambda: None)
+    monkeypatch.setattr(type(bot), "fetch_emojis", _async_empty_list)
 
     async def mock_sync():
         return []
@@ -174,6 +186,8 @@ async def test_setup_hook_handles_extension_load_failure(
     bot = _make_bot()
     monkeypatch.setattr(bot.db, "connect", _async_noop)
     monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
+    monkeypatch.setattr(bot.match_tracker, "start", lambda: None)
+    monkeypatch.setattr(type(bot), "fetch_emojis", _async_empty_list)
 
     original_extensions = (*COMMAND_EXTENSIONS, *EVENT_EXTENSIONS)
     call_count = 0
@@ -214,11 +228,12 @@ async def test_setup_hook_skips_if_already_complete(
 
 @pytest.mark.asyncio
 async def test_on_ready_skips_setup_if_already_complete(
-    caplog: pytest.LogCaptureFixture,
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bot = _make_bot()
     bot._connection.user = SimpleNamespace(name="dm4z")
     bot._setup_complete = True
+    monkeypatch.setattr(bot.db, "fetch_all", _async_empty_list)
 
     with caplog.at_level(logging.INFO):
         await bot.on_ready()
@@ -232,15 +247,18 @@ async def test_close_stops_fetcher_and_closes_db(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     bot = _make_bot()
-    stopped: list[bool] = []
+    stopped: list[str] = []
     closed: list[bool] = []
-    monkeypatch.setattr(bot.stat_fetcher, "stop", lambda: stopped.append(True))
+    monkeypatch.setattr(bot.stat_fetcher, "stop", lambda: stopped.append("stat"))
+    monkeypatch.setattr(bot.match_tracker, "stop", lambda: stopped.append("match"))
     monkeypatch.setattr(bot.db, "close", lambda: _async_noop_track(closed))
+    monkeypatch.setattr(bot.db, "fetch_all", _async_empty_list)
     monkeypatch.setattr(
         discord.Bot, "close", lambda self: _async_noop()
     )
     await bot.close()
-    assert stopped == [True]
+    assert "match" in stopped
+    assert "stat" in stopped
     assert closed == [True]
 
 
@@ -305,9 +323,39 @@ async def test_before_invoke_hook_handles_db_error(
     assert "Failed to track command usage" in caplog.text
 
 
+@pytest.mark.asyncio
+async def test_setup_hook_handles_emoji_fetch_failure(
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    bot = _make_bot()
+    monkeypatch.setattr(bot, "load_extension", lambda x: None)
+    monkeypatch.setattr(bot.db, "connect", _async_noop)
+    monkeypatch.setattr(bot.stat_fetcher, "start", lambda: None)
+    monkeypatch.setattr(bot.match_tracker, "start", lambda: None)
+
+    async def failing_emojis(*_a: object, **_kw: object) -> list:
+        raise RuntimeError("emoji fetch failed")
+
+    monkeypatch.setattr(type(bot), "fetch_emojis", failing_emojis)
+
+    async def ok_sync():
+        return []
+
+    monkeypatch.setattr(bot, "sync_commands", ok_sync)
+    monkeypatch.setattr(type(bot), "pending_application_commands", property(lambda self: []))
+
+    with caplog.at_level(logging.ERROR):
+        await bot.setup_hook()
+    assert "Failed to load application emojis" in caplog.text
+
+
 async def _async_noop() -> None:
     pass
 
 
 async def _async_noop_track(tracker: list) -> None:
     tracker.append(True)
+
+
+async def _async_empty_list(*_args: object, **_kwargs: object) -> list:
+    return []
