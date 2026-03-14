@@ -47,17 +47,19 @@ def _player_name(
     profile_id = str(player["profileId"])
     name = player.get("name", "Unknown")
     color = player.get("color", "")
+    country = player.get("country", "")
     profile_link = f"[{name}]({PROFILE_URL.format(profile_id=profile_id)})"
 
     emoji = app_emojis.get(f"aoe2_player_{color}") if color else None
     prefix = f"{emoji} " if emoji else ""
+    flag = f" :flag_{country}:" if country else ""
 
     if profile_id in tracked_profile_ids:
         member_id = member_map.get(profile_id)
         mention = f" (<@{member_id}>)" if member_id else ""
-        return f"{prefix}**{profile_link}**{mention}"
+        return f"{prefix}**{profile_link}**{flag}{mention}"
 
-    return f"{prefix}{profile_link}"
+    return f"{prefix}{profile_link}{flag}"
 
 
 def _player_civ(

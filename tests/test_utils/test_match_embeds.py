@@ -92,6 +92,7 @@ def test_player_name_tracked() -> None:
     assert "**" in name
     assert "hjpotter92" in name
     assert "<@100>" in name
+    assert ":flag_in:" in name
 
 
 def test_player_name_not_tracked() -> None:
@@ -99,12 +100,14 @@ def test_player_name_not_tracked() -> None:
     assert "**" not in name
     assert "OpponentPlayer" in name
     assert "<@" not in name
+    assert ":flag_bd:" in name
 
 
 def test_player_name_tracked_no_member_map() -> None:
     name = _player_name(SAMPLE_PLAYERS[0], {"1228227"}, {}, {})
     assert "**" in name
     assert "<@" not in name
+    assert ":flag_in:" in name
 
 
 def test_player_name_with_color_emoji() -> None:
@@ -122,6 +125,14 @@ def test_player_name_no_color() -> None:
     player = {**SAMPLE_PLAYERS[0], "color": ""}
     name = _player_name(player, {"1228227"}, {"1228227": 100}, {})
     assert "hjpotter92" in name
+    assert ":flag_in:" in name
+
+
+def test_player_name_no_country() -> None:
+    player = {**SAMPLE_PLAYERS[0], "country": ""}
+    name = _player_name(player, {"1228227"}, {"1228227": 100}, {})
+    assert "hjpotter92" in name
+    assert ":flag_" not in name
 
 
 def test_player_civ_with_emoji() -> None:
