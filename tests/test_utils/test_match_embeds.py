@@ -10,7 +10,9 @@ from dm4z_bot.utils.match_embeds import (
     _build_team_fields,
     _format_duration,
     _iso_to_datetime,
-    _player_line,
+    _player_civ,
+    _player_name,
+    _player_third_col,
     build_active_match_embed,
     build_active_match_view,
     build_finished_match_embed,
@@ -62,7 +64,7 @@ SAMPLE_MATCH_DATA = {
     "mapImageUrl": "https://example.com/megarandom.png",
     "server": "centralindia",
     "averageRating": 1255,
-    "mapSize": "Large",
+    "mapSizeName": "Large",
     "population": 200,
     "players": SAMPLE_PLAYERS,
 }
@@ -85,80 +87,92 @@ def test_format_duration_with_hours() -> None:
     assert result == "1h 15m 30s"
 
 
-def test_player_line_tracked() -> None:
-    line = _player_line(
-        SAMPLE_PLAYERS[0],
-        tracked_profile_ids={"1228227"},
-        member_map={"1228227": 100},
-        app_emojis={},
-    )
-    assert "**" in line
-    assert "hjpotter92" in line
-    assert "1315" in line
-    assert "Sicilians" in line
-    assert "<@100>" in line
+def test_player_name_tracked() -> None:
+    name = _player_name(SAMPLE_PLAYERS[0], {"1228227"}, {"1228227": 100}, {})
+    assert "**" in name
+    assert "hjpotter92" in name
+    assert "<@100>" in name
 
 
-def test_player_line_not_tracked() -> None:
-    line = _player_line(
-        SAMPLE_PLAYERS[1],
-        tracked_profile_ids={"1228227"},
-        member_map={"1228227": 100},
-        app_emojis={},
-    )
-    assert "**" not in line or "OpponentPlayer" in line
-    assert "<@" not in line
+def test_player_name_not_tracked() -> None:
+    name = _player_name(SAMPLE_PLAYERS[1], {"1228227"}, {"1228227": 100}, {})
+    assert "**" not in name
+    assert "OpponentPlayer" in name
+    assert "<@" not in name
 
 
-def test_player_line_with_emoji() -> None:
+def test_player_name_tracked_no_member_map() -> None:
+    name = _player_name(SAMPLE_PLAYERS[0], {"1228227"}, {}, {})
+    assert "**" in name
+    assert "<@" not in name
+
+
+def test_player_name_with_color_emoji() -> None:
+    class FakeEmoji:
+        def __str__(self) -> str:
+            return "<:aoe2_player_2:456>"
+
+    emojis = {"aoe2_player_2": FakeEmoji()}
+    name = _player_name(SAMPLE_PLAYERS[0], {"1228227"}, {"1228227": 100}, emojis)
+    assert "<:aoe2_player_2:456>" in name
+    assert "hjpotter92" in name
+
+
+def test_player_name_no_color() -> None:
+    player = {**SAMPLE_PLAYERS[0], "color": ""}
+    name = _player_name(player, {"1228227"}, {"1228227": 100}, {})
+    assert "hjpotter92" in name
+
+
+def test_player_civ_with_emoji() -> None:
     class FakeEmoji:
         def __str__(self) -> str:
             return "<:aoe2_civ_sicilians:123>"
 
-    fake_emoji = FakeEmoji()
-    line = _player_line(
-        SAMPLE_PLAYERS[0],
-        tracked_profile_ids={"1228227"},
-        member_map={"1228227": 100},
-        app_emojis={"aoe2_civ_sicilians": fake_emoji},
-    )
-    assert "<:aoe2_civ_sicilians:123>" in line
-    assert "Sicilians" in line
+    civ = _player_civ(SAMPLE_PLAYERS[0], {"aoe2_civ_sicilians": FakeEmoji()})
+    assert "<:aoe2_civ_sicilians:123>" in civ
+    assert "Sicilians" in civ
 
 
-def test_player_line_tracked_no_member_map() -> None:
-    line = _player_line(
-        SAMPLE_PLAYERS[0],
-        tracked_profile_ids={"1228227"},
-        member_map={},
-        app_emojis={},
-    )
-    assert "**" in line
-    assert "<@" not in line
+def test_player_civ_no_emoji() -> None:
+    civ = _player_civ(SAMPLE_PLAYERS[0], {})
+    assert civ == "Sicilians"
 
 
-def test_build_team_fields() -> None:
+def test_player_third_col_active() -> None:
+    val = _player_third_col(SAMPLE_PLAYERS[0], 462419759, is_finished=False)
+    assert val == "1315"
+
+
+def test_player_third_col_finished() -> None:
+    val = _player_third_col(SAMPLE_PLAYERS[0], 462419759, is_finished=True)
+    assert "⬇️" in val
+    assert "gameId=462419759" in val
+    assert "profileId=1228227" in val
+
+
+def test_build_team_fields_active() -> None:
     fields = _build_team_fields(
-        SAMPLE_PLAYERS,
-        tracked_profile_ids={"1228227"},
-        member_map={"1228227": 100},
-        app_emojis={},
+        SAMPLE_PLAYERS, {"1228227"}, {"1228227": 100}, {}, 462419759,
     )
-    assert len(fields) == 2
+    assert len(fields) == 6
     assert "Team 1" in fields[0].name
-    assert "Team 2" in fields[1].name
+    assert fields[1].name == "Civilisation"
+    assert fields[2].name == "ELO"
+    assert "Team 2" in fields[3].name
+    assert all(f.inline for f in fields)
 
 
-def test_build_team_fields_with_results() -> None:
+def test_build_team_fields_finished_with_results() -> None:
     fields = _build_team_fields(
-        SAMPLE_PLAYERS,
-        tracked_profile_ids={"1228227"},
-        member_map={"1228227": 100},
-        app_emojis={},
-        team_results={1: True, 2: False},
+        SAMPLE_PLAYERS, {"1228227"}, {"1228227": 100}, {}, 462419759,
+        team_results={1: True, 2: False}, is_finished=True,
     )
+    assert len(fields) == 6
     assert "🏆" in fields[0].name
-    assert "💀" in fields[1].name
+    assert fields[2].name == "Replay"
+    assert "⬇️" in fields[2].value
+    assert "💀" in fields[3].name
 
 
 def test_build_active_match_embed() -> None:
@@ -172,7 +186,10 @@ def test_build_active_match_embed() -> None:
     assert "Map: MegaRandom" in embed.description
     assert "Map Size: Large" in embed.description
     assert embed.color.value == COLOR_ACTIVE
-    assert len(embed.fields) == 2
+    assert len(embed.fields) == 6
+    assert embed.fields[0].name == "Team 1"
+    assert embed.fields[1].name == "Civilisation"
+    assert embed.fields[2].name == "ELO"
     assert embed.thumbnail.url == "https://example.com/megarandom.png"
     assert embed.footer.text == "Server: centralindia"
     assert embed.timestamp is not None
@@ -216,8 +233,11 @@ def test_build_finished_match_embed_with_result() -> None:
     assert "Duration:" in embed.description
     assert embed.footer.text == "Server: centralindia"
     assert embed.timestamp is not None
+    assert len(embed.fields) == 6
     assert "🏆" in embed.fields[0].name
-    assert "💀" in embed.fields[1].name
+    assert embed.fields[2].name == "Replay"
+    assert "⬇️" in embed.fields[2].value
+    assert "💀" in embed.fields[3].name
 
 
 def test_build_finished_match_embed_tracked_lost() -> None:

@@ -10,6 +10,7 @@ from dm4z_bot.utils.constants import (
     AOE2_COMPANION_MATCH_URL,
     AOE2_INSIGHTS_MATCH_URL,
     PROFILE_URL,
+    REPLAY_URL,
     SPECTATE_URL,
 )
 
@@ -37,7 +38,7 @@ def _format_duration(started: str, finished: str) -> str:
     return f"{minutes}m {seconds}s"
 
 
-def _player_line(
+def _player_name(
     player: dict[str, Any],
     tracked_profile_ids: set[str],
     member_map: dict[str, int],
@@ -45,22 +46,41 @@ def _player_line(
 ) -> str:
     profile_id = str(player["profileId"])
     name = player.get("name", "Unknown")
-    rating = player.get("rating", "?")
-    civ_name = player.get("civName", "Unknown")
-    civ_key = player.get("civ", "")
-
-    emoji_key = f"aoe2_civ_{civ_key}"
-    emoji = app_emojis.get(emoji_key)
-    emoji_str = f"{emoji} " if emoji else ""
-
+    color = player.get("color", "")
     profile_link = f"[{name}]({PROFILE_URL.format(profile_id=profile_id)})"
+
+    emoji = app_emojis.get(f"aoe2_player_{color}") if color else None
+    prefix = f"{emoji} " if emoji else ""
 
     if profile_id in tracked_profile_ids:
         member_id = member_map.get(profile_id)
         mention = f" (<@{member_id}>)" if member_id else ""
-        return f"{emoji_str}{civ_name} **{profile_link}** ({rating}){mention}"
+        return f"{prefix}**{profile_link}**{mention}"
 
-    return f"{emoji_str}{civ_name} {profile_link} ({rating})"
+    return f"{prefix}{profile_link}"
+
+
+def _player_civ(
+    player: dict[str, Any],
+    app_emojis: dict[str, discord.Emoji],
+) -> str:
+    civ_name = player.get("civName", "Unknown")
+    civ_key = player.get("civ", "")
+    emoji = app_emojis.get(f"aoe2_civ_{civ_key}")
+    return f"{emoji} {civ_name}" if emoji else civ_name
+
+
+def _player_third_col(
+    player: dict[str, Any],
+    match_id: int,
+    *,
+    is_finished: bool,
+) -> str:
+    profile_id = str(player["profileId"])
+    if is_finished:
+        url = REPLAY_URL.format(match_id=match_id, profile_id=profile_id)
+        return f"[⬇️]({url})"
+    return str(player.get("rating", "?"))
 
 
 def _build_team_fields(
@@ -68,7 +88,10 @@ def _build_team_fields(
     tracked_profile_ids: set[str],
     member_map: dict[str, int],
     app_emojis: dict[str, discord.Emoji],
+    match_id: int,
+    *,
     team_results: dict[int, bool] | None = None,
+    is_finished: bool = False,
 ) -> list[discord.EmbedField]:
     teams: dict[int, list[dict[str, Any]]] = {}
     for player in players:
@@ -87,15 +110,19 @@ def _build_team_fields(
             elif won is False:
                 team_name = f"💀 {team_name}"
 
-        lines = [
-            _player_line(p, tracked_profile_ids, member_map, app_emojis)
+        names = "\n".join(
+            _player_name(p, tracked_profile_ids, member_map, app_emojis)
             for p in team_players
-        ]
-        fields.append(discord.EmbedField(
-            name=team_name,
-            value="\n".join(lines),
-            inline=False,
-        ))
+        )
+        civs = "\n".join(_player_civ(p, app_emojis) for p in team_players)
+        third = "\n".join(
+            _player_third_col(p, match_id, is_finished=is_finished) for p in team_players
+        )
+
+        fields.append(discord.EmbedField(name=team_name, value=names, inline=True))
+        fields.append(discord.EmbedField(name="Civilisation", value=civs, inline=True))
+        third_heading = "Replay" if is_finished else "ELO"
+        fields.append(discord.EmbedField(name=third_heading, value=third, inline=True))
 
     return fields
 
@@ -108,9 +135,10 @@ def build_active_match_embed(
 ) -> discord.Embed:
     map_name = match_data.get("mapName", "Unknown Map")
     leaderboard = match_data.get("leaderboardName", "Unknown")
-    map_size = match_data.get("mapSize", "")
+    map_size = match_data.get("mapSizeName", "")
     server = match_data.get("server", "unknown")
     started = match_data.get("started", "")
+    match_id = match_data.get("matchId", 0)
     map_image = match_data.get("mapImageUrl")
     players = match_data.get("players", [])
 
@@ -130,7 +158,9 @@ def build_active_match_embed(
     if map_image:
         embed.set_thumbnail(url=map_image)
 
-    for field in _build_team_fields(players, tracked_profile_ids, member_map, app_emojis):
+    for field in _build_team_fields(
+        players, tracked_profile_ids, member_map, app_emojis, match_id,
+    ):
         embed.add_field(name=field.name, value=field.value, inline=field.inline)
 
     embed.set_footer(text=f"Server: {server}")
@@ -167,7 +197,8 @@ def build_finished_match_embed(
 ) -> discord.Embed:
     map_name = match_data.get("mapName", "Unknown Map")
     leaderboard = match_data.get("leaderboardName", "Unknown")
-    map_size = match_data.get("mapSize", "")
+    map_size = match_data.get("mapSizeName", "")
+    match_id = match_data.get("matchId", 0)
     server = match_data.get("server", "unknown")
     started = match_data.get("started", "")
     players = match_data.get("players", [])
@@ -220,7 +251,10 @@ def build_finished_match_embed(
     if map_image:
         embed.set_thumbnail(url=map_image)
 
-    for field in _build_team_fields(players, tracked_profile_ids, member_map, app_emojis, team_results):
+    for field in _build_team_fields(
+        players, tracked_profile_ids, member_map, app_emojis, match_id,
+        team_results=team_results, is_finished=True,
+    ):
         embed.add_field(name=field.name, value=field.value, inline=field.inline)
 
     embed.set_footer(text=f"Server: {server}")
