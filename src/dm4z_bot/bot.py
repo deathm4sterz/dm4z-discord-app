@@ -10,7 +10,9 @@ from dm4z_bot.services.aoe2_api import Aoe2Api
 from dm4z_bot.services.games.aoe2_service import Aoe2Service
 from dm4z_bot.services.games.cs2_service import Cs2Service
 from dm4z_bot.services.games.registry import GameRegistry
+from dm4z_bot.tasks.match_tracker import MatchTracker
 from dm4z_bot.tasks.stat_fetcher import StatFetcher
+from dm4z_bot.utils.mod_notifications import notify_mod_channels
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,7 @@ COMMAND_EXTENSIONS: tuple[str, ...] = (
     "dm4z_bot.commands.profile",
     "dm4z_bot.commands.stats",
     "dm4z_bot.commands.guild_config",
+    "dm4z_bot.commands.tracking",
 )
 
 EVENT_EXTENSIONS: tuple[str, ...] = (
@@ -55,6 +58,8 @@ class Dm4zBot(discord.Bot):
         self.game_registry.register(Aoe2Service(self.aoe2_api))
         self.game_registry.register(Cs2Service(api_key=settings.leetify_api_key))
         self.stat_fetcher = StatFetcher(self.db, self.game_registry)
+        self.match_tracker = MatchTracker(self, self.db, self.aoe2_api)
+        self.emoji_cache: dict[str, object] = {}
         self._setup_complete = False
         self.before_invoke(self._before_invoke_hook)
 
@@ -86,6 +91,15 @@ class Dm4zBot(discord.Bot):
             logger.error("Failed to sync commands: %s", e)
 
         self.stat_fetcher.start()
+        self.match_tracker.start()
+
+        try:
+            emojis = await self.fetch_emojis()
+            self.emoji_cache = {e.name: e for e in emojis}
+            logger.info("Loaded %d application emojis", len(self.emoji_cache))
+        except Exception:
+            logger.exception("Failed to load application emojis")
+
         self._setup_complete = True
 
     async def on_ready(self) -> None:
@@ -97,6 +111,7 @@ class Dm4zBot(discord.Bot):
                 await self.setup_hook()
 
             logger.info("Bot is ready! Loaded %d commands", len(self.pending_application_commands))
+            await notify_mod_channels(self, self.db, "Bot is now online.")
 
     async def _before_invoke_hook(self, ctx: discord.ApplicationContext) -> None:
         if ctx.guild_id is None:
@@ -115,6 +130,8 @@ class Dm4zBot(discord.Bot):
 
     async def close(self) -> None:
         logger.info("Bot shutting down")
+        await notify_mod_channels(self, self.db, "Bot is shutting down.")
+        self.match_tracker.stop()
         self.stat_fetcher.stop()
         await self.db.close()
         await super().close()

@@ -18,14 +18,14 @@ class GuildConfigCommands(discord.Cog):
         self.db = db
         self.registry = registry
 
-    @discord.slash_command(description="Enable a game for this server with a dedicated channel")
+    @discord.slash_command(description="Register a game for this server with a dedicated channel")
     @option("game", str, description="Game key (e.g. aoe2, cs2)")
     @option("channel", discord.TextChannel, description="Channel for this game's notifications")
     @discord.default_permissions(administrator=True)
-    async def enable_game(
+    async def register_game(
         self, ctx: discord.ApplicationContext, game: str, channel: discord.TextChannel
     ) -> None:
-        logger.debug("/enable_game invoked by %s: game=%s, channel=%s", ctx.author, game, channel)
+        logger.debug("/register_game invoked by %s: game=%s, channel=%s", ctx.author, game, channel)
         if game not in self.registry:
             await ctx.respond(f"❌ Unknown game `{game}`. Available: {', '.join(self.registry.keys())}", ephemeral=True)
             return

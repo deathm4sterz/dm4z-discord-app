@@ -1,11 +1,24 @@
 from __future__ import annotations
 
-from dm4z_bot.commands import age, approve, guild_config, help, leaderboard, link, match_info, profile, rank, stats
+from dm4z_bot.commands import (
+    age,
+    approve,
+    guild_config,
+    help,
+    leaderboard,
+    link,
+    match_info,
+    profile,
+    rank,
+    stats,
+    tracking,
+)
 from dm4z_bot.database.db import Database
 from dm4z_bot.services.aoe2_api import Aoe2Api
 from dm4z_bot.services.games.aoe2_service import Aoe2Service
 from dm4z_bot.services.games.cs2_service import Cs2Service
 from dm4z_bot.services.games.registry import GameRegistry
+from dm4z_bot.tasks.match_tracker import MatchTracker
 
 
 class FakeBot:
@@ -16,6 +29,7 @@ class FakeBot:
         self.game_registry = GameRegistry()
         self.game_registry.register(Aoe2Service(self.aoe2_api))
         self.game_registry.register(Cs2Service())
+        self.match_tracker = MatchTracker(self, self.db, self.aoe2_api)
 
     def add_cog(self, cog: object) -> None:
         self.cogs.append(type(cog).__name__)
@@ -33,6 +47,7 @@ def test_setup_registers_all_command_cogs() -> None:
     profile.setup(bot)  # type: ignore[arg-type]
     stats.setup(bot)  # type: ignore[arg-type]
     guild_config.setup(bot)  # type: ignore[arg-type]
+    tracking.setup(bot)  # type: ignore[arg-type]
     assert bot.cogs == [
         "AgeCommands",
         "HelpCommands",
@@ -44,4 +59,5 @@ def test_setup_registers_all_command_cogs() -> None:
         "ProfileCommands",
         "StatsCommands",
         "GuildConfigCommands",
+        "TrackingCommands",
     ]

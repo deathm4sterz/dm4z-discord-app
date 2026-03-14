@@ -10,6 +10,7 @@ import httpx
 from dm4z_bot.utils.constants import (
     DEFAULT_USER_AGENT,
     LEADERBOARD_URL_TEMPLATE,
+    MATCH_API_URL,
     PLAYER_IDS,
     PROFILE_API_URL,
 )
@@ -71,6 +72,11 @@ class Aoe2Api:
             "page": 1,
         })
         url = f"{PROFILE_API_URL}?{query}"
+        return await self.fetch_json(url)
+
+    async def fetch_match(self, match_id: int) -> dict[str, Any]:
+        logger.debug("Fetching match details for ID: %d", match_id)
+        url = f"{MATCH_API_URL}/{match_id}"
         return await self.fetch_json(url)
 
     async def leaderboard(self) -> str:

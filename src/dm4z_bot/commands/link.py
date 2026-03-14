@@ -93,9 +93,9 @@ class LinkCommands(discord.Cog):
         )
         if result.rowcount:
             logger.info("Unlinked %s account for member %d in guild %d", game, member_id, guild_id)
-            await ctx.respond(f"✅ Unlinked your **{game}** account.")
+            await ctx.respond(f"✅ Unlinked your **{game}** account.", ephemeral=True)
         else:
-            await ctx.respond(f"❌ No linked **{game}** account found.")
+            await ctx.respond(f"❌ No linked **{game}** account found.", ephemeral=True)
 
 
 def setup(bot: discord.Bot) -> None:

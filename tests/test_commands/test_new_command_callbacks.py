@@ -652,11 +652,11 @@ async def test_stats_with_data(memory_db: Database) -> None:
 
 
 @pytest.mark.asyncio
-async def test_enable_game_success(memory_db: Database) -> None:
+async def test_register_game_success(memory_db: Database) -> None:
     ctx = FakeContext()
     channel = SimpleNamespace(id=555, mention="#channel")
     cog = GuildConfigCommands(bot=SimpleNamespace(), db=memory_db, registry=_make_registry())
-    await GuildConfigCommands.enable_game.callback(cog, ctx, "testgame", channel)
+    await GuildConfigCommands.register_game.callback(cog, ctx, "testgame", channel)
     assert "enabled" in ctx.responses[0][0].lower()
 
     row = await memory_db.fetch_one(
@@ -667,11 +667,11 @@ async def test_enable_game_success(memory_db: Database) -> None:
 
 
 @pytest.mark.asyncio
-async def test_enable_game_unknown(memory_db: Database) -> None:
+async def test_register_game_unknown(memory_db: Database) -> None:
     ctx = FakeContext()
     channel = SimpleNamespace(id=555, mention="#channel")
     cog = GuildConfigCommands(bot=SimpleNamespace(), db=memory_db, registry=_make_registry())
-    await GuildConfigCommands.enable_game.callback(cog, ctx, "nope", channel)
+    await GuildConfigCommands.register_game.callback(cog, ctx, "nope", channel)
     assert "Unknown game" in ctx.responses[0][0]
 
 
@@ -680,7 +680,7 @@ async def test_disable_game_success(memory_db: Database) -> None:
     ctx = FakeContext()
     channel = SimpleNamespace(id=555, mention="#channel")
     cog = GuildConfigCommands(bot=SimpleNamespace(), db=memory_db, registry=_make_registry())
-    await GuildConfigCommands.enable_game.callback(cog, ctx, "testgame", channel)
+    await GuildConfigCommands.register_game.callback(cog, ctx, "testgame", channel)
 
     ctx2 = FakeContext()
     await GuildConfigCommands.disable_game.callback(cog, ctx2, "testgame")

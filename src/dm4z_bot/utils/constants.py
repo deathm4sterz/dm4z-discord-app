@@ -30,6 +30,13 @@ PLATFORM_ICONS: dict[str, str] = {
     "xbox": "https://cdn3.emoji.gg/emojis/41927-xbox.png",
 }
 
+MATCH_API_URL = "https://data.aoe2companion.com/api/matches"
+AOE2_COMPANION_MATCH_URL = "https://www.aoe2companion.com/match/{match_id}"
+AOE2_INSIGHTS_MATCH_URL = "https://www.aoe2insights.com/match/{match_id}/"
+AOE2_INSIGHTS_ANALYZE_URL = "https://www.aoe2insights.com/match/{match_id}/analyze/"
+SPECTATE_URL = "https://httpbin.org/redirect-to?url=aoe2de://1/{match_id}"
+REPLAY_URL = "https://aoe.ms/replay/?gameId={match_id}&profileId={profile_id}"
+
 LEETIFY_BASE_URL = "https://api-public.cs-prod.leetify.com"
 LEETIFY_PROFILE_PATH = "/v3/profile"
 LEETIFY_API_KEY_HEADER = "_leetify_key"
