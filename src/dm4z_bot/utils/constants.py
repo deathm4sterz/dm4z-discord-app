@@ -37,6 +37,10 @@ AOE2_INSIGHTS_ANALYZE_URL = "https://www.aoe2insights.com/match/{match_id}/analy
 SPECTATE_URL = "https://httpbin.org/redirect-to?url=aoe2de://1/{match_id}"
 REPLAY_URL = "https://aoe.ms/replay/?gameId={match_id}&profileId={profile_id}"
 
+LEETIFY_LOGO = "https://leetify.com/assets/images/meta/logo.png"
+LEETIFY_PROFILE_URL = "https://leetify.com/app/profile/{steam64_id}"
+LEETIFY_PINK = 0xF84982
+
 LEETIFY_BASE_URL = "https://api-public.cs-prod.leetify.com"
 LEETIFY_PROFILE_PATH = "/v3/profile"
 LEETIFY_API_KEY_HEADER = "_leetify_key"

@@ -9,7 +9,6 @@ from dm4z_bot.commands import (
     link,
     match_info,
     profile,
-    rank,
     stats,
     tracking,
 )
@@ -40,7 +39,6 @@ def test_setup_registers_all_command_cogs() -> None:
     age.setup(bot)  # type: ignore[arg-type]
     help.setup(bot)  # type: ignore[arg-type]
     match_info.setup(bot)  # type: ignore[arg-type]
-    rank.setup(bot)  # type: ignore[arg-type]
     leaderboard.setup(bot)  # type: ignore[arg-type]
     link.setup(bot)  # type: ignore[arg-type]
     approve.setup(bot)  # type: ignore[arg-type]
@@ -52,7 +50,6 @@ def test_setup_registers_all_command_cogs() -> None:
         "AgeCommands",
         "HelpCommands",
         "MatchInfoCommands",
-        "RankCommands",
         "LeaderboardCommands",
         "LinkCommands",
         "ApproveCommands",

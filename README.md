@@ -27,7 +27,6 @@ digraph architecture {
         Stats [label="/stats" fillcolor="#e8f5e9"]
         GuildCfg [label="/guild_config" fillcolor="#e8f5e9"]
         Age [label="/age" fillcolor="#fff3e0"]
-        Rank [label="/rank  /team_rank" fillcolor="#fff3e0"]
         LB [label="/leaderboard" fillcolor="#fff3e0"]
         MI [label="/match_info" fillcolor="#fff3e0"]
     }
@@ -55,7 +54,7 @@ digraph architecture {
 
     Users -> Bot [label="slash commands"]
     Bot -> Events [label="events"]
-    Bot -> {Link Approve Profile Stats GuildCfg Age Rank LB MI}
+    Bot -> {Link Approve Profile Stats GuildCfg Age LB MI}
 
     Link -> Registry
     Approve -> Registry
@@ -91,7 +90,7 @@ digraph architecture {
 
 ### Game commands
 
-- `/rank` / `/team_rank` -- AoE2 rank data via aoe2companion nightbot API
+- `/profile [member] [player_name] [profile_id]` -- channel-aware game profile (AoE2 embeds, CS2 Leetify embeds)
 - `/leaderboard` -- server-local AoE2 leaderboard via aoe2insights
 - `/stats <game> [member]` -- cached stats for an approved linked account
 
@@ -102,7 +101,6 @@ digraph architecture {
 - `/approve <member> <game>` -- approve a pending link (mod-only)
 - `/reject <member> <game>` -- reject a pending link (mod-only)
 - `/pending [game]` -- list pending link requests (mod-only)
-- `/profile [member]` -- show approved linked accounts and latest stats
 
 ### Guild configuration
 
@@ -211,10 +209,8 @@ src/
       leaderboard.py
       link.py             # /link, /unlink
       match_info.py
-      profile.py
-      rank.py
+      profile.py          # /profile (channel-aware, AoE2 + CS2 embeds)
       stats.py
-      team_rank.py
     database/
       db.py               # async SQLite manager
       migrations.py        # schema versioning

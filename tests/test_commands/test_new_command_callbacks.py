@@ -12,7 +12,6 @@ from dm4z_bot.commands.approve import (
 )
 from dm4z_bot.commands.guild_config import GuildConfigCommands
 from dm4z_bot.commands.link import LinkCommands
-from dm4z_bot.commands.profile import ProfileCommands
 from dm4z_bot.commands.stats import StatsCommands
 from dm4z_bot.database.db import Database
 from dm4z_bot.services.games.registry import GameRegistry
@@ -551,62 +550,6 @@ async def test_reject_command_notifies_game_channel(memory_db: Database) -> None
     assert len(channel.messages) == 1
     assert "denied" in channel.messages[0][0].lower()
     assert "<@200>" in channel.messages[0][0]
-
-
-# --- Profile command tests ---
-
-
-@pytest.mark.asyncio
-async def test_profile_no_accounts(memory_db: Database) -> None:
-    ctx = FakeContext()
-    ctx.author = SimpleNamespace(id=100, mention="<@100>")
-    cog = ProfileCommands(bot=SimpleNamespace(), db=memory_db)
-    await ProfileCommands.profile.callback(cog, ctx, None)
-    assert "no approved" in ctx.responses[0][0].lower()
-
-
-@pytest.mark.asyncio
-async def test_profile_with_accounts(memory_db: Database) -> None:
-    await _insert_approved_account(memory_db, 100, 1, "testgame", "acc1", "Display1")
-    await memory_db.execute(
-        "INSERT INTO game_stats (game_account_id, stats_json) VALUES (?, ?)",
-        (1, '{"score": 42}'),
-    )
-
-    ctx = FakeContext()
-    target = SimpleNamespace(id=100, mention="<@100>")
-    cog = ProfileCommands(bot=SimpleNamespace(), db=memory_db)
-    await ProfileCommands.profile.callback(cog, ctx, target)
-    assert "Profile for" in ctx.responses[0][0]
-    assert "score: 42" in ctx.responses[0][0]
-
-
-@pytest.mark.asyncio
-async def test_profile_no_stats(memory_db: Database) -> None:
-    await _insert_approved_account(memory_db, 100, 1, "testgame", "acc1", "Display1")
-
-    ctx = FakeContext()
-    target = SimpleNamespace(id=100, mention="<@100>")
-    cog = ProfileCommands(bot=SimpleNamespace(), db=memory_db)
-    await ProfileCommands.profile.callback(cog, ctx, target)
-    assert "Profile for" in ctx.responses[0][0]
-    assert "testgame" in ctx.responses[0][0]
-
-
-@pytest.mark.asyncio
-async def test_profile_with_all_none_stats(memory_db: Database) -> None:
-    await _insert_approved_account(memory_db, 100, 1, "testgame", "acc1", "Display1")
-    await memory_db.execute(
-        "INSERT INTO game_stats (game_account_id, stats_json) VALUES (?, ?)",
-        (1, '{"score": null}'),
-    )
-
-    ctx = FakeContext()
-    target = SimpleNamespace(id=100, mention="<@100>")
-    cog = ProfileCommands(bot=SimpleNamespace(), db=memory_db)
-    await ProfileCommands.profile.callback(cog, ctx, target)
-    assert "Profile for" in ctx.responses[0][0]
-    assert "—" not in ctx.responses[0][0]
 
 
 # --- Stats command tests ---
