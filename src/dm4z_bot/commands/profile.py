@@ -164,7 +164,7 @@ def _last_match_description(recent_matches: list[dict[str, Any]]) -> str:
     if finished:
         try:
             dt = datetime.fromisoformat(finished.replace("Z", "+00:00"))
-            date_str = f" ({dt.strftime('%b %d, %Y')})"
+            date_str = f" (<t:{int(dt.timestamp())}:D>)"
         except (ValueError, TypeError):
             pass
     return f"Last match: **{map_name}** \u2014 {outcome} {score[0]}-{score[1]}{date_str}"
