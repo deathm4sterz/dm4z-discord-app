@@ -14,7 +14,6 @@ def _make_settings(**overrides: object) -> Settings:
     defaults = {
         "discord_token": "fake_token",
         "log_level": "INFO",
-        "debug_guild_id": None,
         "database_path": ":memory:",
     }
     defaults.update(overrides)
@@ -139,15 +138,6 @@ async def test_setup_hook_logs_extension_loading(
     expected_count = len(COMMAND_EXTENSIONS) + len(EVENT_EXTENSIONS)
     assert f"Loading {expected_count} extensions..." in caplog.text
     assert "Extensions loaded. Pending commands: 0" in caplog.text
-
-
-@pytest.mark.asyncio
-async def test_bot_debug_mode_logging(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    with caplog.at_level(logging.INFO):
-        _make_bot(_make_settings(debug_guild_id=123456789))
-    assert "Debug mode enabled for guild: 123456789" in caplog.text
 
 
 @pytest.mark.asyncio

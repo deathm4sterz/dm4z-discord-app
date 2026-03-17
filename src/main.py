@@ -25,7 +25,6 @@ def parse_args() -> Namespace:
     parser = ArgumentParser(description="dm4z Discord bot")
     parser.add_argument("--discord-token", default=None)
     parser.add_argument("--log-level", default=None)
-    parser.add_argument("--debug-guild-id", type=int, default=None)
     parser.add_argument("--database-path", default=None)
     parser.add_argument("--leetify-api-key", default=None)
     return parser.parse_args()

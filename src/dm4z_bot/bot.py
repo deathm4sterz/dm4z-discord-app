@@ -42,14 +42,7 @@ class Dm4zBot(discord.Bot):
         intents.message_content = True
         intents.members = True
 
-        debug_guilds = [settings.debug_guild_id] if settings.debug_guild_id else None
-
-        if debug_guilds:
-            logger.info("Debug mode enabled for guild: %s", settings.debug_guild_id)
-        else:
-            logger.info("Global command mode enabled")
-
-        super().__init__(intents=intents, debug_guilds=debug_guilds)
+        super().__init__(intents=intents)
 
         self.aoe2_api = Aoe2Api()
         self.db = Database(settings.database_path)

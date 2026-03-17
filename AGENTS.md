@@ -69,7 +69,6 @@ def setup(bot: discord.Bot) -> None:
 
 ```python
 # Required: DISCORD_TOKEN (mandatory), LOG_LEVEL (optional)
-# Optional: DEBUG_GUILD_ID (for testing)
 # Pattern: load_settings() → frozen dataclass
 # Always: load_dotenv() before getenv()
 # Errors: raise RuntimeError for missing required vars

@@ -73,7 +73,6 @@ def test_parse_args_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     args = main_module.parse_args()
     assert args.discord_token is None
     assert args.log_level is None
-    assert args.debug_guild_id is None
     assert args.database_path is None
 
 
@@ -82,11 +81,10 @@ def test_parse_args_with_values(monkeypatch: pytest.MonkeyPatch) -> None:
         "sys.argv",
         [
             "main.py", "--discord-token", "tok", "--log-level", "DEBUG",
-            "--debug-guild-id", "42", "--database-path", "/x.db",
+            "--database-path", "/x.db",
         ],
     )
     args = main_module.parse_args()
     assert args.discord_token == "tok"
     assert args.log_level == "DEBUG"
-    assert args.debug_guild_id == 42
     assert args.database_path == "/x.db"

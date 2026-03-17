@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 class Settings:
     discord_token: str
     log_level: str = "INFO"
-    debug_guild_id: int | None = None
     database_path: str = "dm4z_bot.db"
     leetify_api_key: str | None = None
 
@@ -33,9 +32,6 @@ def load_settings(cli_args: Namespace | None = None) -> Settings:
     if not token:
         raise RuntimeError("missing DISCORD_TOKEN")
 
-    guild_id_raw = _resolve(cli_args, "debug_guild_id", "DEBUG_GUILD_ID")
-    debug_guild_id = int(guild_id_raw) if guild_id_raw else None
-
     log_level = _resolve(cli_args, "log_level", "LOG_LEVEL", "INFO")
 
     database_path = _resolve(cli_args, "database_path", "DATABASE_PATH", "dm4z_bot.db")
@@ -45,7 +41,6 @@ def load_settings(cli_args: Namespace | None = None) -> Settings:
     return Settings(
         discord_token=token,
         log_level=log_level.upper() if log_level else "INFO",
-        debug_guild_id=debug_guild_id,
         database_path=database_path or "dm4z_bot.db",
         leetify_api_key=leetify_api_key,
     )
