@@ -36,6 +36,7 @@ AOE2_INSIGHTS_MATCH_URL = "https://www.aoe2insights.com/match/{match_id}/"
 AOE2_INSIGHTS_ANALYZE_URL = "https://www.aoe2insights.com/match/{match_id}/analyze/"
 SPECTATE_URL = "https://httpbin.org/redirect-to?url=aoe2de://1/{match_id}"
 REPLAY_URL = "https://aoe.ms/replay/?gameId={match_id}&profileId={profile_id}"
+AOE2_TECH_TREE_URL = "https://aoe2techtree.net/#{civ_name}"
 
 LEETIFY_LOGO = "https://leetify.com/assets/images/meta/logo.png"
 LEETIFY_PROFILE_URL = "https://leetify.com/app/profile/{steam64_id}"

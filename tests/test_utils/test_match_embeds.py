@@ -19,6 +19,23 @@ from dm4z_bot.utils.match_embeds import (
     build_finished_match_view,
 )
 
+AI_PLAYER = {
+    "profileId": -1,
+    "name": "AI Hardest",
+    "rating": None,
+    "civ": "mongols",
+    "civName": "Mongols",
+    "civImageUrl": "https://example.com/mongols.png",
+    "color": 3,
+    "colorHex": "#00FF00",
+    "team": 2,
+    "teamName": "Team 2",
+    "country": "",
+    "games": 0,
+    "wins": 0,
+    "losses": 0,
+}
+
 SAMPLE_PLAYERS = [
     {
         "profileId": 1228227,
@@ -142,12 +159,12 @@ def test_player_civ_with_emoji() -> None:
 
     civ = _player_civ(SAMPLE_PLAYERS[0], {"aoe2_civ_sicilians": FakeEmoji()})
     assert "<:aoe2_civ_sicilians:123>" in civ
-    assert "Sicilians" in civ
+    assert "[Sicilians](https://aoe2techtree.net/#Sicilians)" in civ
 
 
 def test_player_civ_no_emoji() -> None:
     civ = _player_civ(SAMPLE_PLAYERS[0], {})
-    assert civ == "Sicilians"
+    assert civ == "[Sicilians](https://aoe2techtree.net/#Sicilians)"
 
 
 def test_player_third_col_active() -> None:
@@ -363,6 +380,24 @@ def test_build_finished_match_embed_empty_footer() -> None:
     embed = build_finished_match_embed(data, result_data, set(), {}, {})
     assert embed.footer is not None
     assert "Server:" in embed.footer.text
+
+
+def test_player_name_ai() -> None:
+    name = _player_name(AI_PLAYER, set(), {}, {})
+    assert "AI Hardest" in name
+    assert "aoe2companion.com" not in name
+    assert "[" not in name
+
+
+def test_player_third_col_finished_ai() -> None:
+    val = _player_third_col(AI_PLAYER, 462419759, is_finished=True)
+    assert val == "—"
+    assert "replay" not in val.lower()
+
+
+def test_player_third_col_active_ai() -> None:
+    val = _player_third_col(AI_PLAYER, 462419759, is_finished=False)
+    assert val == "None"
 
 
 @pytest.mark.asyncio

@@ -9,10 +9,13 @@ import discord
 from dm4z_bot.utils.constants import (
     AOE2_COMPANION_MATCH_URL,
     AOE2_INSIGHTS_MATCH_URL,
+    AOE2_TECH_TREE_URL,
     PROFILE_URL,
     REPLAY_URL,
     SPECTATE_URL,
 )
+
+AI_PROFILE_ID = "-1"
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +51,8 @@ def _player_name(
     name = player.get("name", "Unknown")
     color = player.get("color", "")
     country = player.get("country", "")
-    profile_link = f"[{name}]({PROFILE_URL.format(profile_id=profile_id)})"
+    is_ai = profile_id == AI_PROFILE_ID
+    profile_link = name if is_ai else f"[{name}]({PROFILE_URL.format(profile_id=profile_id)})"
 
     emoji = app_emojis.get(f"aoe2_player_{color}") if color else None
     prefix = f"{emoji} " if emoji else ""
@@ -69,7 +73,8 @@ def _player_civ(
     civ_name = player.get("civName", "Unknown")
     civ_key = player.get("civ", "")
     emoji = app_emojis.get(f"aoe2_civ_{civ_key}")
-    return f"{emoji} {civ_name}" if emoji else civ_name
+    tech_tree = f"[{civ_name}]({AOE2_TECH_TREE_URL.format(civ_name=civ_name)})"
+    return f"{emoji} {tech_tree}" if emoji else tech_tree
 
 
 def _player_third_col(
@@ -80,6 +85,8 @@ def _player_third_col(
 ) -> str:
     profile_id = str(player["profileId"])
     if is_finished:
+        if profile_id == AI_PROFILE_ID:
+            return "—"
         url = REPLAY_URL.format(match_id=match_id, profile_id=profile_id)
         return f"[⬇️]({url})"
     return str(player.get("rating", "?"))
