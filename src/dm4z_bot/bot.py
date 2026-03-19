@@ -24,7 +24,6 @@ COMMAND_EXTENSIONS: tuple[str, ...] = (
     "dm4z_bot.commands.link",
     "dm4z_bot.commands.approve",
     "dm4z_bot.commands.profile",
-    "dm4z_bot.commands.stats",
     "dm4z_bot.commands.guild_config",
     "dm4z_bot.commands.tracking",
 )

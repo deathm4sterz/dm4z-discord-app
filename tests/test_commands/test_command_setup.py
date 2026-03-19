@@ -9,7 +9,6 @@ from dm4z_bot.commands import (
     link,
     match_info,
     profile,
-    stats,
     tracking,
 )
 from dm4z_bot.database.db import Database
@@ -43,7 +42,6 @@ def test_setup_registers_all_command_cogs() -> None:
     link.setup(bot)  # type: ignore[arg-type]
     approve.setup(bot)  # type: ignore[arg-type]
     profile.setup(bot)  # type: ignore[arg-type]
-    stats.setup(bot)  # type: ignore[arg-type]
     guild_config.setup(bot)  # type: ignore[arg-type]
     tracking.setup(bot)  # type: ignore[arg-type]
     assert bot.cogs == [
@@ -54,7 +52,6 @@ def test_setup_registers_all_command_cogs() -> None:
         "LinkCommands",
         "ApproveCommands",
         "ProfileCommands",
-        "StatsCommands",
         "GuildConfigCommands",
         "TrackingCommands",
     ]

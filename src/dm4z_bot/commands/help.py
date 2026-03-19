@@ -27,7 +27,6 @@ class HelpCommands(discord.Cog):
                 "**Getting started**",
                 "• `/link <game> <account_id>` Link your account for approval",
                 "• `/profile [member] [player_name] [profile_id]` Game profile for the current channel",
-                "• `/stats <game> [member]` Show latest cached stats",
                 "• `/leaderboard` Show the server leaderboard",
                 "• `/match_info <link_or_match_id>` Extract a match id and quick links",
                 "• `/age [user]` Show Discord account creation date",
@@ -46,7 +45,7 @@ class HelpCommands(discord.Cog):
                 "• `/tracked [game]` List tracked members (mod-only)",
                 "",
                 f"**Supported game keys:** {game_keys or '`none`'}",
-                "Tip: start with `/link`, then use `/profile` or `/stats` once approved.",
+                "Tip: start with `/link`, then use `/profile` once approved.",
             ]
         )
         await ctx.respond(message, ephemeral=True)

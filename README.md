@@ -24,7 +24,6 @@ digraph architecture {
         Link [label="/link  /unlink" fillcolor="#e8f5e9"]
         Approve [label="/approve  /reject  /pending" fillcolor="#e8f5e9"]
         Profile [label="/profile" fillcolor="#e8f5e9"]
-        Stats [label="/stats" fillcolor="#e8f5e9"]
         GuildCfg [label="/guild_config" fillcolor="#e8f5e9"]
         Age [label="/age" fillcolor="#fff3e0"]
         LB [label="/leaderboard" fillcolor="#fff3e0"]
@@ -54,11 +53,10 @@ digraph architecture {
 
     Users -> Bot [label="slash commands"]
     Bot -> Events [label="events"]
-    Bot -> {Link Approve Profile Stats GuildCfg Age LB MI}
+    Bot -> {Link Approve Profile GuildCfg Age LB MI}
 
     Link -> Registry
     Approve -> Registry
-    Stats -> Registry
     Profile -> Registry
     Registry -> AoE2
     Registry -> CS2
@@ -68,7 +66,6 @@ digraph architecture {
     Link -> DB
     Approve -> DB
     Profile -> DB
-    Stats -> DB
     GuildCfg -> DB
     Events -> DB
 
@@ -92,8 +89,6 @@ digraph architecture {
 
 - `/profile [member] [player_name] [profile_id]` -- channel-aware game profile (AoE2 embeds, CS2 Leetify embeds)
 - `/leaderboard` -- server-local AoE2 leaderboard via aoe2insights
-- `/stats <game> [member]` -- cached stats for an approved linked account
-
 ### Account linking & moderation
 
 - `/link <game> <account_id>` -- submit a link request (pending moderator approval)
@@ -210,7 +205,6 @@ src/
       link.py             # /link, /unlink
       match_info.py
       profile.py          # /profile (channel-aware, AoE2 + CS2 embeds)
-      stats.py
     database/
       db.py               # async SQLite manager
       migrations.py        # schema versioning

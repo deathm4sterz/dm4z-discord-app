@@ -12,7 +12,6 @@ from dm4z_bot.commands.approve import (
 )
 from dm4z_bot.commands.guild_config import GuildConfigCommands
 from dm4z_bot.commands.link import LinkCommands
-from dm4z_bot.commands.stats import StatsCommands
 from dm4z_bot.database.db import Database
 from dm4z_bot.services.games.registry import GameRegistry
 
@@ -552,45 +551,6 @@ async def test_reject_command_notifies_game_channel(memory_db: Database) -> None
     assert "<@200>" in channel.messages[0][0]
 
 
-# --- Stats command tests ---
-
-
-@pytest.mark.asyncio
-async def test_stats_no_account(memory_db: Database) -> None:
-    ctx = FakeContext()
-    ctx.author = SimpleNamespace(id=100, mention="<@100>")
-    cog = StatsCommands(bot=SimpleNamespace(), db=memory_db, registry=_make_registry())
-    await StatsCommands.stats.callback(cog, ctx, "testgame", None)
-    assert "No approved" in ctx.responses[0][0]
-
-
-@pytest.mark.asyncio
-async def test_stats_no_data_yet(memory_db: Database) -> None:
-    await _insert_approved_account(memory_db, 100, 1, "testgame", "acc1", "Disp")
-
-    ctx = FakeContext()
-    target = SimpleNamespace(id=100, mention="<@100>")
-    cog = StatsCommands(bot=SimpleNamespace(), db=memory_db, registry=_make_registry())
-    await StatsCommands.stats.callback(cog, ctx, "testgame", target)
-    assert "No data yet" in ctx.responses[0][0]
-
-
-@pytest.mark.asyncio
-async def test_stats_with_data(memory_db: Database) -> None:
-    await _insert_approved_account(memory_db, 100, 1, "testgame", "acc1", "Disp")
-    await memory_db.execute(
-        "INSERT INTO game_stats (game_account_id, stats_json) VALUES (?, ?)",
-        (1, '{"score": 99}'),
-    )
-
-    ctx = FakeContext()
-    target = SimpleNamespace(id=100, mention="<@100>")
-    cog = StatsCommands(bot=SimpleNamespace(), db=memory_db, registry=_make_registry())
-    await StatsCommands.stats.callback(cog, ctx, "testgame", target)
-    assert "score" in ctx.responses[0][0]
-    assert "99" in ctx.responses[0][0]
-
-
 # --- Guild config command tests ---
 
 
@@ -665,13 +625,3 @@ async def _insert_pending_account(
     )
 
 
-async def _insert_approved_account(
-    db: Database, member_id: int, guild_id: int, game: str, account_id: str, display_name: str
-) -> None:
-    await db.execute("INSERT OR IGNORE INTO guilds (guild_id) VALUES (?)", (guild_id,))
-    await db.execute("INSERT OR IGNORE INTO members (member_id, guild_id) VALUES (?, ?)", (member_id, guild_id))
-    await db.execute(
-        "INSERT INTO game_accounts (member_id, guild_id, game, account_identifier, display_name, status) "
-        "VALUES (?, ?, ?, ?, ?, 'approved')",
-        (member_id, guild_id, game, account_id, display_name),
-    )
