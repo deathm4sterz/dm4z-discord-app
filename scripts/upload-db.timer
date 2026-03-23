@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily upload of SQLite database to Discord webhook
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

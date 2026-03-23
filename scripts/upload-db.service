@@ -1,0 +1,9 @@
+[Unit]
+Description=Upload SQLite database to Discord webhook
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/upload-db.env
+ExecStart=%h/dm4z-discord-app/scripts/upload-db.sh %h/path/to/database.sqlite
